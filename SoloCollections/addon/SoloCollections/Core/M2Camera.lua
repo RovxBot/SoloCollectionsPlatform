@@ -389,6 +389,9 @@ end
 -- 最后的 activate 请求选择 M2 camera 0；SoloCam 只在此控件渲染期间覆盖
 -- position、target 与原生 roll，随后立即恢复原始值。
 function M2Camera.Apply(model, pose)
+    -- ItemCameraBridge parked 2026-08-23. Restore the body below to re-enable.
+    return false
+    --[=[
     if not model or type(model.SetCamera) ~= "function" then
         return false
     end
@@ -423,13 +426,18 @@ function M2Camera.Apply(model, pose)
     local rollApplied = targetApplied and sendCameraRequest(model, rollRequest)
     local activated = rollApplied and sendCameraRequest(model, REQUEST_ACTIVATE)
     return activated and true or false
+    ]=]
 end
 
 -- Presenter-facing adapter: pages pass camera intent without reaching into the
 -- legacy M2 implementation. A nil pose deliberately leaves the provider's native framing.
 function M2Camera.ApplyPresenterPose(model, pose)
+    -- ItemCameraBridge parked 2026-08-23.
+    return false, "ITEM_CAMERA_PARKED"
+    --[=[
     if not pose then return false, "NO_POSE" end
     return M2Camera.Apply(model, pose)
+    ]=]
 end
 
 -- Send a complete transactional body-profile correction.  The DLL will not
@@ -438,6 +446,9 @@ end
 -- a same-tick stock-client fallback and is consumed by SoloCam only after a
 -- valid body activation.
 function M2Camera.ApplyBodyProfile(model, profile, delta)
+    -- BodyCameraBridge parked 2026-08-23. Restore the body below to re-enable.
+    return false, "BODY_CAMERA_PARKED"
+    --[=[
     if not model or type(model.SetCamera) ~= "function" then
         return false, "MODEL_UNAVAILABLE"
     end
@@ -483,6 +494,7 @@ function M2Camera.ApplyBodyProfile(model, profile, delta)
     -- client.  A matching SoloCam v7 hook consumes this after activation.
     request(1)
     return accepted and true or false, accepted and "READY" or "REQUEST_REJECTED"
+    ]=]
 end
 
 function M2Camera.Reset(model)

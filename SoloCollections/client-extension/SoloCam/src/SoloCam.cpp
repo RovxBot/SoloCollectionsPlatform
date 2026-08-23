@@ -12,22 +12,34 @@
 #include <cstddef>
 #include <cstdint>
 
+// BodyCameraBridge / ItemCameraBridge / DirectDisplayBridge are parked.
+// PreviewItemBridge remains the only active item-card path. Set this to 1
+// to restore the parked bridges without deleting the original code.
+#ifndef SOLOCAM_ENABLE_PARKED_BRIDGES
+#define SOLOCAM_ENABLE_PARKED_BRIDGES 0
+#endif
+
 namespace
 {
 using SetCameraByIndexFn = void(__thiscall*)(void* simpleModel, std::uint32_t index);
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
 using RenderSimpleModelFn = void(__cdecl*)(void* simpleModel);
+#endif
 using PlayerModelSetCreatureLuaFn = int(__cdecl*)(void* luaState);
 using LuaIsNumberFn = int(__cdecl*)(void* luaState, int index);
 using LuaToIntegerFn = std::uint32_t(__cdecl*)(void* luaState, int index);
 using LuaRawGetIFn = void(__cdecl*)(void* luaState, int index, int key);
 using LuaToUserDataFn = void*(__cdecl*)(void* luaState, int index);
 using LuaSetTopFn = void(__cdecl*)(void* luaState, int index);
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
 using PlayerModelSetCreatureRecordFn =
     void(__thiscall*)(void* playerModel, SyntheticCreatureRecord* creatureRecord);
+#endif
 using PlayerModelTryOnFn =
     void(__thiscall*)(void* playerModel, int itemId, int unknown, int slotId);
 using PlayerModelUndressFn = void(__thiscall*)(void* playerModel);
 using FrameScriptExecuteFn = int(__cdecl*)(const char* script, const char* source, int unknown);
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
 using DataMgrGetCoordFn = void(__cdecl*)(void* camera, std::uint32_t slot, CameraVector* value);
 using DataMgrSetCoordFn = void(__cdecl*)(
     void* camera,
@@ -41,9 +53,12 @@ using DataMgrSetScalarFn = void(__cdecl*)(
     std::uint32_t slot,
     float value
 );
+#endif
 
 SetCameraByIndexFn g_originalSetCameraByIndex = nullptr;
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
 RenderSimpleModelFn g_originalRenderSimpleModel = nullptr;
+#endif
 PlayerModelSetCreatureLuaFn g_originalPlayerModelSetCreature = nullptr;
 HWND g_wowWindow = nullptr;
 UINT_PTR g_capabilityTimer = 0;
@@ -69,6 +84,7 @@ struct TrackedModel
 
 TrackedModel g_trackedModels[kMaximumTrackedModels]{};
 
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
 struct DirectDisplayModel
 {
     void* model = nullptr;
@@ -78,6 +94,7 @@ struct DirectDisplayModel
 // PlayerModel stores this pointer at +0x378, so the backing record must outlive
 // the Lua call. Keep one stable record per model instead of using stack memory.
 DirectDisplayModel g_directDisplayModels[kMaximumTrackedModels]{};
+#endif
 CRITICAL_SECTION g_trackingLock{};
 
 TrackedModel* FindTrackedModel(void* model, bool create)
@@ -103,6 +120,7 @@ TrackedModel* FindTrackedModel(void* model, bool create)
     return nullptr;
 }
 
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
 SyntheticCreatureRecord* AcquireDirectDisplayRecord(
     void* model,
     std::uint32_t displayId
@@ -137,7 +155,9 @@ SyntheticCreatureRecord* AcquireDirectDisplayRecord(
     LeaveCriticalSection(&g_trackingLock);
     return result;
 }
+#endif
 
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
 void ActivateCharacterProfile(void* model, const CharacterCameraProfile* profile)
 {
     EnterCriticalSection(&g_trackingLock);
@@ -241,6 +261,7 @@ bool ConsumeFallback(void* model, std::uint32_t index)
     LeaveCriticalSection(&g_trackingLock);
     return consumed;
 }
+#endif
 
 void DeactivateCustomCamera(void* model)
 {
@@ -252,6 +273,7 @@ void DeactivateCustomCamera(void* model)
     LeaveCriticalSection(&g_trackingLock);
 }
 
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
 struct CameraOverride
 {
     const CharacterCameraProfile* characterProfile = nullptr;
@@ -289,9 +311,27 @@ bool GetCameraOverride(void* model, CameraOverride& override)
     LeaveCriticalSection(&g_trackingLock);
     return hasOverride;
 }
+#endif
 
 void __fastcall HookSetCameraByIndex(void* simpleModel, void*, std::uint32_t index)
 {
+#if !SOLOCAM_ENABLE_PARKED_BRIDGES
+    // Parked bridges must still swallow reserved indexes. Forwarding a
+    // sentinel or 0x5/0x7 command to the stock M2 camera path is unsafe.
+    if (IsBodyCameraRequest(index)
+        || IsItemCameraRequest(index)
+        || FindCharacterCameraProfile(index) != nullptr)
+    {
+        DeactivateCustomCamera(simpleModel);
+        g_originalSetCameraByIndex(
+            simpleModel,
+            IsItemCameraRequest(index) ? 0u : Client12340::NativeDressingRoomCamera
+        );
+        return;
+    }
+    DeactivateCustomCamera(simpleModel);
+    g_originalSetCameraByIndex(simpleModel, index);
+#else
     if (IsBodyCameraRequest(index))
     {
         BodyCameraCommand command{};
@@ -360,8 +400,10 @@ void __fastcall HookSetCameraByIndex(void* simpleModel, void*, std::uint32_t ind
 
     DeactivateCustomCamera(simpleModel);
     g_originalSetCameraByIndex(simpleModel, index);
+#endif
 }
 
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
 void __cdecl HookRenderSimpleModel(void* simpleModel)
 {
     CameraOverride override{};
@@ -448,6 +490,7 @@ void __cdecl HookRenderSimpleModel(void* simpleModel)
     dataMgrSetCoord(camera, Client12340::CameraPositionSlot, &nativePosition, 0);
     dataMgrSetCoord(camera, Client12340::CameraTargetSlot, &nativeTarget, 0);
 }
+#endif
 
 void* ResolveLuaWidgetObject(void* luaState, int index)
 {
@@ -531,6 +574,7 @@ int __cdecl HookPlayerModelSetCreature(void* luaState)
         std::uint32_t displayId = 0;
         if (TryDecodeDisplayInfoRequest(request, displayId))
         {
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
             void* playerModel = ResolveLuaWidgetObject(luaState, 1);
             if (playerModel)
             {
@@ -549,6 +593,11 @@ int __cdecl HookPlayerModelSetCreature(void* luaState)
                     setCreatureRecord(playerModel, record);
                 }
             }
+#else
+            // DirectDisplayBridge is parked. Consume the reserved family so
+            // leftover Lua cannot fall into the stock creature-cache lookup.
+            (void)displayId;
+#endif
             return 0;
         }
     }
@@ -586,7 +635,7 @@ void CALLBACK CapabilityTimerProc(HWND, UINT, UINT_PTR, DWORD)
         "if SoloCollections and SoloCollections.NativePreview then "
         "SoloCollections.NativePreview:SetRuntimeCapability({"
         "soloCamVersion=11,previewProtocolVersion=1,features={"
-        "directDisplayV1=true,previewTryOnV1=true}}) end";
+        "previewTryOnV1=true}}) end";
     __try
     {
         reinterpret_cast<FrameScriptExecuteFn>(Client12340::FrameScriptExecute)(
@@ -700,6 +749,7 @@ DWORD WINAPI InstallHooks(void*)
     }
     g_originalSetCameraByIndex = reinterpret_cast<SetCameraByIndexFn>(setCameraGateway);
 
+#if SOLOCAM_ENABLE_PARKED_BRIDGES
     void* renderGateway = nullptr;
     if (!InstallInlineHook(
             Client12340::RenderSimpleModel,
@@ -713,6 +763,7 @@ DWORD WINAPI InstallHooks(void*)
     }
 
     g_originalRenderSimpleModel = reinterpret_cast<RenderSimpleModelFn>(renderGateway);
+#endif
 
     void* setCreatureGateway = nullptr;
     if (!InstallInlineHook(
@@ -736,7 +787,7 @@ DWORD WINAPI InstallHooks(void*)
     }
 
     OutputDebugStringA(
-        "SoloCam: v11 corrected Transmorpher slot mapping, camera and direct display bridges enabled.\n"
+        "SoloCam: v11 preview TryOn enabled; body/item/direct-display bridges parked.\n"
     );
     return 0;
 }

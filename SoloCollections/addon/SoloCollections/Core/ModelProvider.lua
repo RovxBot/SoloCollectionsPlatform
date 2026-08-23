@@ -44,10 +44,14 @@ function Legacy:Present(request)
         local callback = ok and request.onReady or request.onUnavailable
         if type(callback) == "function" then pcall(callback, ok and self or "set-unit") end
     elseif self.kind == "DISPLAY" then
+        -- DirectDisplayBridge parked 2026-08-23.
+        ok = false
+        --[=[
         ok = request.displayId and frame.SetCreature and
             pcall(frame.SetCreature, frame, Provider.DIRECT_DISPLAY_REQUEST_BASE + request.displayId)
+        ]=]
         local callback = ok and request.onReady or request.onUnavailable
-        if type(callback) == "function" then pcall(callback, ok and self or "set-display") end
+        if type(callback) == "function" then pcall(callback, ok and self or "DIRECT_DISPLAY_PARKED") end
     end
     return ok, generation
 end
@@ -317,10 +321,14 @@ function SafeDressUp:Destroy()
 end
 
 local function displayLoader(frame, request, done)
+    -- DirectDisplayBridge parked 2026-08-23.
+    done(false, "DIRECT_DISPLAY_PARKED")
+    --[=[
     local displayId = tonumber(request.displayId)
     if not displayId or not frame.SetCreature then done(false, "display-id") return end
     local ok, reason = pcall(frame.SetCreature, frame, Provider.DIRECT_DISPLAY_REQUEST_BASE + displayId)
     done(ok, ok and nil or reason)
+    ]=]
 end
 
 function Provider.Create(kind, frame, options)
