@@ -4,7 +4,7 @@
 
 [English](README.en.md) · [简体中文](README.md) · [Releases](https://github.com/haha2345/SoloCollectionsPlatform/releases) · [Release Notes](docs/RELEASE.zh-CN.md) · [AzerothCore Module](https://github.com/haha2345/mod-solo-collections)
 
-[![Release](https://img.shields.io/badge/Release-v0.3.2-blue.svg)](https://github.com/haha2345/SoloCollectionsPlatform/releases/tag/v0.3.2)
+[![Release](https://img.shields.io/badge/Release-v0.3.3-blue.svg)](https://github.com/haha2345/SoloCollectionsPlatform/releases/tag/v0.3.3)
 [![AzerothCore](https://img.shields.io/badge/AzerothCore-WotLK%203.3.5a-orange.svg)](https://www.azerothcore.org/)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/License%20(AddOn)-GPL--3.0--or--later-green.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 [![License: AGPL-3.0](https://img.shields.io/badge/License%20(C%2B%2B)-AGPL--3.0-blueviolet.svg)](https://www.gnu.org/licenses/agpl-3.0.html)

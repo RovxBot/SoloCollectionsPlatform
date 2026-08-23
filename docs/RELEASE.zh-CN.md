@@ -1,6 +1,6 @@
-# SoloCollectionsPlatform v0.3.2 怎么用
+# SoloCollectionsPlatform v0.3.3 怎么用
 
-相对 v0.3.1：收藏模块不再打玩法 `LOG_*`；`worldserver` 加载完成后用和 AzerothCore 同款的 `SOLO` / `COLLECTIONS` 花字提示署名；登录聊天一行写「本服务端已加载 SoloCollections 模块，此模块模拟军团再临版本的收藏系统和幻化系统」（`SoloCollections` 金色）；署名含作者、QQ 群、邮箱、仓库 `https://github.com/haha2345/SoloCollectionsPlatform` 和学习交流声明；右下角署名先设字体再写字，避免 `SetText(): Font not set`。world 库 `sc_module_credits` 增加 `repository`（玩法不读这张表）。
+相对 v0.3.2：官方客户端补丁改为只发 `patch-zhCN-c.MPQ`（收藏随机坐骑图标）。`Patch-W.MPQ` 与 `patch-zhCN-6.MPQ` 退役，不再作为本项目官方补丁。AddOn / SQL / 模块源码与 v0.3.2 同源。
 
 这不是完整游戏包。你必须自己已有：
 
@@ -18,7 +18,7 @@
 | `addon.zip` | 客户端必须 | 解压出 `SoloCollections`，放到 `<WoW>\Interface\AddOns\` |
 | `sql.zip` | 服务端必须 | 导入 MySQL，见下文 |
 | `module-source.zip` | 服务端必须 | 解压到 `<AzerothCore>\modules\mod-solo-collections`，**随 Core 一起编译 worldserver** |
-| `mpq.zip` | 可选 | `Patch-W.MPQ` → `<WoW>\Data\`；`patch-zhCN-6.MPQ` → `<WoW>\Data\zhCN\` |
+| `mpq.zip` | 可选 | `patch-zhCN-c.MPQ` → `<WoW>\Data\zhCN\` |
 | `solocam.zip` | 可选 | 只含 `SoloCam.dll`。**不能**只拷 DLL 就生效，见第 4 节 |
 | `client-runtime.zip` | 可选 | 上面客户端三件套的合并包，等价于 addon + mpq + dll |
 
@@ -26,8 +26,7 @@
 
 ```text
 Interface/AddOns/SoloCollections/   →  拷到客户端同名目录
-Data/Patch-W.MPQ                    →  <WoW>\Data\
-Data/zhCN/patch-zhCN-6.MPQ          →  <WoW>\Data\zhCN\
+Data/zhCN/patch-zhCN-c.MPQ          →  <WoW>\Data\zhCN\
 SoloCam.dll                         →  客户端根目录（仍要自己的启动器，见第 4 节）
 ```
 
@@ -35,14 +34,14 @@ SoloCam.dll                         →  客户端根目录（仍要自己的启
 
 1. 关掉魔兽。
 2. 安装 `addon.zip`（或 runtime 包里的 AddOn）。
-3. （可选）安装两个项目 MPQ。先备份客户端里同名文件再覆盖。
+3. （可选）安装 `patch-zhCN-c.MPQ`。先备份客户端里同名文件再覆盖。
 4. 用**平时那套私服**登录。游戏内：
    - `/sc` 或 `/collections`：收藏手册
    - `/tmog` 或 `/幻化`：独立幻化室
    - `/reload`：热重载插件
 
-未装 MPQ 时手册和幻化室能开，部分独立武器预览会降级。  
-`Patch-X/Y/Z`、`patch-zhCN-z`、`patch-zhCN-9` **不要**当本项目补丁安装。
+未装 MPQ 时手册和幻化室能开，随机坐骑按钮会缺图标。  
+`Patch-W` / `patch-zhCN-6` / `Patch-Y` 不再是本项目官方补丁。`Patch-X/Z`、`patch-zhCN-z`、`patch-zhCN-9` **不要**当本项目补丁安装。
 
 ## 3. 服务端（必须编译进 AzerothCore）
 
