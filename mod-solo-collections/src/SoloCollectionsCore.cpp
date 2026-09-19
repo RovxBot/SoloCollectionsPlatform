@@ -435,6 +435,7 @@ public:
         GetAccountCollectionStore().Update();
         if (IsCppBackendOwner())
         {
+            Sc2ProtocolFlushDeferredSnapshots();
             GetMountCollectionService().Update();
             GetCompanionCollectionService().Update();
             GetToyCollectionService().Update();

@@ -10,6 +10,8 @@ STORE_H = (ROOT / "src" / "SoloCollectionsAccountStore.h").read_text(encoding="u
 STORE_CPP = (ROOT / "src" / "SoloCollectionsAccountStore.cpp").read_text(encoding="utf-8")
 PROTOCOL_H = (ROOT / "src" / "SoloCollectionsProtocolServer.h").read_text(encoding="utf-8")
 PROTOCOL_CPP = (ROOT / "src" / "SoloCollectionsProtocolServer.cpp").read_text(encoding="utf-8")
+PROTOCOL_SCRIPT = (ROOT / "src" / "SoloCollectionsProtocolScript.cpp").read_text(encoding="utf-8")
+CORE = (ROOT / "src" / "SoloCollectionsCore.cpp").read_text(encoding="utf-8")
 COMMANDS = (ROOT / "src" / "SoloCollectionsCommands.cpp").read_text(encoding="utf-8")
 
 
@@ -33,3 +35,21 @@ class Phase12ServerPerformanceContractTests(unittest.TestCase):
         self.assertIn("constexpr std::size_t ShadowSetRows = 509", COMMANDS)
         self.assertIn("constexpr std::size_t CompanionCandidateRows = 201", COMMANDS)
         self.assertIn('"benchmark", HandleBenchmark', COMMANDS)
+
+    def test_set_projection_is_revision_gated_and_not_recomputed_every_player_update(self):
+        pump = PROTOCOL_SCRIPT[
+            PROTOCOL_SCRIPT.index("void Sc2ProtocolPumpAndSend"):
+            PROTOCOL_SCRIPT.index("Sc2ServerDiagnostics Sc2ProtocolDiagnostics")
+        ]
+        self.assertIn("RefreshSetProjection(player)", pump)
+        self.assertNotIn("GetSetCatalog().CompletedByAccount", pump)
+        self.assertIn("snapshot->Generation.Value()", PROTOCOL_SCRIPT)
+        self.assertIn("snapshot->Revision.Value()", PROTOCOL_SCRIPT)
+
+    def test_wardrobe_queue_is_flushed_once_from_the_world_update_hook(self):
+        pump = PROTOCOL_SCRIPT[
+            PROTOCOL_SCRIPT.index("void Sc2ProtocolPumpAndSend"):
+            PROTOCOL_SCRIPT.index("Sc2ServerDiagnostics Sc2ProtocolDiagnostics")
+        ]
+        self.assertIn("Sc2ProtocolFlushDeferredSnapshots", CORE)
+        self.assertNotIn("FlushWardrobeSnapshots()", pump)

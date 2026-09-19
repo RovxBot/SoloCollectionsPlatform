@@ -13,6 +13,7 @@ namespace SoloCollections
 {
 void Sc2ProtocolOpenSession(Player* player);
 void Sc2ProtocolCloseSession(Player* player);
+void Sc2ProtocolFlushDeferredSnapshots();
 void Sc2ProtocolPumpAndSend(Player* player);
 [[nodiscard]] Sc2ServerDiagnostics Sc2ProtocolDiagnostics();
 [[nodiscard]] std::uint32_t Sc2CatalogSchemaVersion();

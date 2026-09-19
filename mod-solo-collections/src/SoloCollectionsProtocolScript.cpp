@@ -31,8 +31,10 @@
 #include <chrono>
 #include <charconv>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 
 namespace SoloCollections
@@ -46,6 +48,15 @@ namespace
 constexpr std::string_view BackendBuild = "0.2.0";
 constexpr std::string_view WirePrefix = "SC2\t";
 
+struct SetProjectionRevision
+{
+    std::uint64_t Generation = 0;
+    std::uint64_t Revision = 0;
+};
+
+std::mutex SetProjectionRevisionMutex;
+std::unordered_map<std::uint32_t, SetProjectionRevision> SetProjectionRevisions;
+
 std::uint64_t MonotonicMilliseconds()
 {
     return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -55,6 +66,33 @@ std::uint64_t MonotonicMilliseconds()
 AccountSessionId SessionId(Player* player)
 {
     return AccountSessionId(player->GetGUID().GetCounter());
+}
+
+Sc2Server& GetSc2Server();
+
+void RefreshSetProjection(Player* player)
+{
+    if (!player || !player->GetSession())
+        return;
+
+    AccountId accountId(player->GetSession()->GetAccountId());
+    std::optional<AccountCacheSnapshot> snapshot = GetAccountCollectionCache().Snapshot(accountId);
+    if (!snapshot || snapshot->State != AccountCacheLoadState::Ready)
+        return;
+
+    std::uint32_t sessionId = player->GetGUID().GetCounter();
+    {
+        std::scoped_lock lock(SetProjectionRevisionMutex);
+        SetProjectionRevision& projected = SetProjectionRevisions[sessionId];
+        if (projected.Generation == snapshot->Generation.Value() &&
+            projected.Revision == snapshot->Revision.Value())
+            return;
+        projected.Generation = snapshot->Generation.Value();
+        projected.Revision = snapshot->Revision.Value();
+    }
+
+    GetSc2Server().SetExternalOwned(
+        SessionId(player), SetCollectionTypeId, GetSetCatalog().CompletedByAccount(accountId));
 }
 
 std::string AppearanceApplyStatus(TransmogApplyResult const& result)
@@ -169,9 +207,10 @@ void Sc2ProtocolOpenSession(Player* player)
     GetSc2Server().OpenSession(AccountId(player->GetSession()->GetAccountId()), SessionId(player));
     GetSc2Server().SetExternalOwned(
         SessionId(player), TitleCollectionTypeId, GetTitleService().OwnedByPlayer(player));
-    GetSc2Server().SetExternalOwned(
-        SessionId(player), SetCollectionTypeId, GetSetCatalog().CompletedByAccount(
-            AccountId(player->GetSession()->GetAccountId())));
+    {
+        std::scoped_lock lock(SetProjectionRevisionMutex);
+        SetProjectionRevisions.erase(player->GetGUID().GetCounter());
+    }
     // Both loads are asynchronous; the initial raw snapshots below may still
     // be empty, and the load completions enqueue wardrobe pushes that replace
     // them once the DB rows arrive.
@@ -217,7 +256,15 @@ void Sc2ProtocolCloseSession(Player* player)
     {
         GetTransmogProjectionService().UnloadCharacter(player->GetGUID());
         GetSc2Server().CloseSession(SessionId(player));
+        std::scoped_lock lock(SetProjectionRevisionMutex);
+        SetProjectionRevisions.erase(player->GetGUID().GetCounter());
     }
+}
+
+void Sc2ProtocolFlushDeferredSnapshots()
+{
+    if (IsCppBackendOwner())
+        FlushWardrobeSnapshots();
 }
 
 bool Sc2ProtocolCanUsePrivateChat(
@@ -618,12 +665,7 @@ void Sc2ProtocolPumpAndSend(Player* player)
     if (!IsCppBackendOwner() || !player || !player->GetSession())
         return;
     AccountSessionId sessionId = SessionId(player);
-    // Deferred (async commit) completions enqueue pushes outside HandleInbound;
-    // flush them here so they reach clients on the next pump.
-    FlushWardrobeSnapshots();
-    GetSc2Server().SetExternalOwned(
-        sessionId, SetCollectionTypeId, GetSetCatalog().CompletedByAccount(
-            AccountId(player->GetSession()->GetAccountId())));
+    RefreshSetProjection(player);
     GetSc2Server().PumpSession(sessionId, MonotonicMilliseconds());
     std::vector<std::string> bodies = GetSc2Server().DrainOutbound(sessionId, Sc2Limits::MaxPacketsPerTick);
     auto started = std::chrono::steady_clock::now();
