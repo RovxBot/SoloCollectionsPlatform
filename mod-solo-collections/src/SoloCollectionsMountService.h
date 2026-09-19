@@ -28,9 +28,6 @@ public:
     void Update();
     [[nodiscard]] std::string ExecuteSummon(Player* player, CollectionId collectionId);
     [[nodiscard]] std::string ExecuteRandomSummon(Player* player);
-    [[nodiscard]] bool CanUseFlyingMountAsGround(Player* player, SpellInfo const* spellInfo,
-        std::uint32_t mapId, std::uint32_t zoneId, std::uint32_t areaId);
-    [[nodiscard]] bool CanReplaceMount(Player* player, SpellInfo const* spellInfo);
     void FinalizeNativeMountCast(Player* player, SpellInfo const* spellInfo);
 
 private:

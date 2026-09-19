@@ -452,21 +452,7 @@ public:
             PLAYERHOOK_ON_CREATE_ITEM, PLAYERHOOK_ON_QUEST_REWARD_ITEM,
             PLAYERHOOK_ON_AFTER_STORE_OR_EQUIP_NEW_ITEM, PLAYERHOOK_ON_EQUIP,
             PLAYERHOOK_ON_LOOT_ITEM, PLAYERHOOK_ON_GROUP_ROLL_REWARD_ITEM,
-            PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT,
-            PLAYERHOOK_ON_CAN_USE_FLYING_MOUNT_AS_GROUND,
-            PLAYERHOOK_ON_CAN_REPLACE_MOUNT }) { }
-
-    bool OnPlayerCanUseFlyingMountAsGround(Player* player, SpellInfo const* spellInfo,
-        std::uint32_t mapId, std::uint32_t zoneId, std::uint32_t areaId) override
-    {
-        return IsCppBackendOwner() && GetMountCollectionService().CanUseFlyingMountAsGround(
-            player, spellInfo, mapId, zoneId, areaId);
-    }
-
-    bool OnPlayerCanReplaceMount(Player* player, SpellInfo const* spellInfo) override
-    {
-        return IsCppBackendOwner() && GetMountCollectionService().CanReplaceMount(player, spellInfo);
-    }
+            PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT }) { }
 
     void OnPlayerLogin(Player* player) override
     {

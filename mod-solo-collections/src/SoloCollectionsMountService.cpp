@@ -236,7 +236,6 @@ public:
         {
             std::scoped_lock lock(_mutex);
             _activeNativeMountState.erase(guid);
-            _pendingPreviousMountAuras.erase(guid);
             return;
         }
         std::uint8_t level = player->GetLevel();
@@ -498,47 +497,11 @@ public:
         return tryPool(all, false);
     }
 
-    bool CanUseFlyingMountAsGround(Player* player, SpellInfo const* spellInfo,
-        std::uint32_t /*mapId*/, std::uint32_t /*zoneId*/, std::uint32_t /*areaId*/)
-    {
-        MountCollectionDefinition const* definition = FindOwnedAction(player, spellInfo);
-        return definition && definition->Capability == MountCapability::Flying;
-    }
-
-    bool CanReplaceMount(Player* player, SpellInfo const* spellInfo)
-    {
-        MountCollectionDefinition const* definition = FindOwnedAction(player, spellInfo);
-        if (!definition)
-            return false;
-
-        std::set<std::uint32_t> previous;
-        for (AuraEffect* mountedEffect : player->GetAuraEffectsByType(SPELL_AURA_MOUNTED))
-            if (mountedEffect && mountedEffect->GetBase())
-                previous.insert(mountedEffect->GetBase()->GetId());
-        std::scoped_lock lock(_mutex);
-        _pendingPreviousMountAuras[player->GetGUID().GetCounter()] = std::move(previous);
-        return true;
-    }
-
     void FinalizeNativeMountCast(Player* player, SpellInfo const* spellInfo)
     {
         MountCollectionDefinition const* definition = FindOwnedAction(player, spellInfo);
         if (!definition)
             return;
-
-        std::set<std::uint32_t> previous;
-        {
-            std::scoped_lock lock(_mutex);
-            auto found = _pendingPreviousMountAuras.find(player->GetGUID().GetCounter());
-            if (found != _pendingPreviousMountAuras.end())
-            {
-                previous = std::move(found->second);
-                _pendingPreviousMountAuras.erase(found);
-            }
-        }
-        for (std::uint32_t auraSpellId : previous)
-            if (auraSpellId != spellInfo->Id)
-                player->RemoveAurasDueToSpell(auraSpellId);
 
         std::uint8_t level = player->GetLevel();
         std::uint32_t ridingSkill = player->GetSkillValue(SKILL_RIDING);
@@ -706,7 +669,6 @@ private:
     std::map<AccountId, MountAccountState> _accounts;
     std::map<std::uint32_t, CollectionRevision> _projectionRevision;
     std::map<std::uint32_t, std::set<std::uint32_t>> _projectionSuppression;
-    std::map<std::uint32_t, std::set<std::uint32_t>> _pendingPreviousMountAuras;
     std::map<std::uint32_t, std::uint64_t> _activeNativeMountState;
     std::mutex _mutex;
 };
@@ -747,17 +709,6 @@ std::string MountCollectionService::ExecuteSummon(Player* player, CollectionId c
 std::string MountCollectionService::ExecuteRandomSummon(Player* player)
 {
     return _impl->ExecuteRandomSummon(player);
-}
-
-bool MountCollectionService::CanUseFlyingMountAsGround(Player* player, SpellInfo const* spellInfo,
-    std::uint32_t mapId, std::uint32_t zoneId, std::uint32_t areaId)
-{
-    return _impl->CanUseFlyingMountAsGround(player, spellInfo, mapId, zoneId, areaId);
-}
-
-bool MountCollectionService::CanReplaceMount(Player* player, SpellInfo const* spellInfo)
-{
-    return _impl->CanReplaceMount(player, spellInfo);
 }
 
 void MountCollectionService::FinalizeNativeMountCast(Player* player, SpellInfo const* spellInfo)

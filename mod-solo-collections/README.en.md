@@ -61,6 +61,14 @@ standalone server. The client target is WoW 3.3.5a build 12340. See the
 [client repository](https://github.com/haha2345/SoloCollections#readme) for
 AddOn and optional SoloCam requirements.
 
+### Core compatibility
+
+The module uses AzerothCore's public `PlayerScript` API only, so it also
+builds against the Playerbot branch without a separate Core patch. Native
+mount casts are reconciled by the regular player-update hook after a
+successful cast. The Core retains its normal rules for whether a mount spell
+may be cast in the current location.
+
 ## Quick installation and build
 
 ### 1. Install under the Core module directory
