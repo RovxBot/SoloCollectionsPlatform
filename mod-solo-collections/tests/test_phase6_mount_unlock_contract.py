@@ -46,6 +46,13 @@ class MountUnlockContractTests(unittest.TestCase):
         self.assertNotIn("GetMountCollectionService().Update()", player_update)
         self.assertIn("std::mutex _mutex", SERVICE)
 
+    def test_random_mount_spell_is_validated_once_at_login(self):
+        login = CORE[CORE.index("void OnPlayerLogin"):CORE.index("void OnPlayerLogout")]
+        player_update = CORE[CORE.index("void OnPlayerUpdate"):CORE.index("void OnPlayerLearnSpell")]
+        self.assertIn("sSpellMgr->GetSpellInfo(MountRandomSpellId)", login)
+        self.assertIn("player->learnSpell(MountRandomSpellId, false)", login)
+        self.assertNotIn("MountRandomSpellId", player_update)
+
     def test_account_mutations_are_serial_and_emit_revision_deltas(self):
         self.assertIn("HasPendingMutation(account)", SERVICE)
         self.assertIn("state.Pending.front()", SERVICE)

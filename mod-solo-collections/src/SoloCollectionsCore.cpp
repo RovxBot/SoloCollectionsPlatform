@@ -22,6 +22,7 @@
 #include "Log.h"
 #include "Player.h"
 #include "ScriptMgr.h"
+#include "SpellMgr.h"
 #include "SpellScript.h"
 #include "WorldSession.h"
 
@@ -473,6 +474,12 @@ public:
         if (IsCppBackendOwner())
         {
             GetMountCollectionService().OnPlayerLogin(player);
+            // MountRandomSpellId is supplied by the optional private DBC overlay.
+            // Do not call Player::learnSpell unless this worldserver actually
+            // loaded that record: Player::learnSpell logs and retries fail for
+            // an unknown spell, which is especially harmful from a player hook.
+            if (sSpellMgr->GetSpellInfo(MountRandomSpellId) && !player->HasSpell(MountRandomSpellId))
+                player->learnSpell(MountRandomSpellId, false);
             GetCompanionCollectionService().OnPlayerLogin(player);
             GetToyCollectionService().OnPlayerLogin(player);
             GetAppearanceService().OnPlayerLogin(player);
@@ -507,15 +514,6 @@ public:
         {
             GetMountCollectionService().ReconcileNativeMountState(player);
             GetMountCollectionService().ReconcileCharacterMountActions(player);
-            if (player && player->GetSession() && !player->HasSpell(MountRandomSpellId))
-            {
-                std::optional<AccountCacheSnapshot> snapshot = GetAccountCollectionCache().Snapshot(
-                    AccountId(player->GetSession()->GetAccountId()));
-                if (snapshot && snapshot->State == AccountCacheLoadState::Ready)
-                {
-                    player->learnSpell(MountRandomSpellId, false);
-                }
-            }
             Sc2ProtocolPumpAndSend(player);
             GetAppearanceService().OnPlayerUpdate(player, diff);
         }
