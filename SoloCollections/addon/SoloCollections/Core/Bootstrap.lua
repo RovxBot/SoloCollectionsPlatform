@@ -1,9 +1,8 @@
 local SC = SoloCollections
 
 local DEFAULTS = {
-    schemaVersion = 11,
-    launcher = { point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -28, y = 150 },
-    transmogLauncher = { point = "BOTTOMRIGHT", relativePoint = "BOTTOMRIGHT", x = -82, y = 150 },
+    schemaVersion = 13,
+    transmogMinimap = { angle = 225 },
     frame = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 0 },
     transmogFrame = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 0 },
     mainTab = "MOUNTS",
@@ -31,9 +30,9 @@ local DEFAULTS = {
         uncollected = true,
         favorites = false,
         classToken = "ALL",
-        armorType = "AUTO",
+        armorType = "ALL",
         slot = "HEAD",
-        weaponType = "AUTO",
+        weaponType = "ALL",
         mounts = {
             unusable = true,
             ground = true,
@@ -91,7 +90,7 @@ local VALID_APPEARANCE_SOURCE_KINDS = {
     drop = true, quest = true, vendor = true, crafted = true,
 }
 local VALID_WEAPON_TYPES = {
-    AUTO = true,
+    AUTO = true, ALL = true,
     ONE_HAND_AXE = true, TWO_HAND_AXE = true, BOW = true, GUN = true,
     ONE_HAND_MACE = true, TWO_HAND_MACE = true, POLEARM = true,
     ONE_HAND_SWORD = true, TWO_HAND_SWORD = true, STAFF = true,
@@ -169,6 +168,15 @@ local function normalizePosition(db, key, defaults)
     repairEnum(position, "relativePoint", VALID_POINTS, defaults.relativePoint)
     repairScalar(position, "x", "number", defaults.x)
     repairScalar(position, "y", "number", defaults.y)
+end
+
+local function normalizeMinimapPosition(db, key, defaults)
+    repairScalar(db, key, "table", {})
+    local position = db[key]
+    if not isFiniteNumber(position.angle) then
+        position.angle = defaults.angle
+    end
+    position.angle = math.floor((position.angle % 360) + 0.5) % 360
 end
 
 local function isValidWeaponFamilyKey(key)
@@ -462,8 +470,10 @@ local function normalizeDatabase(db)
         db.schemaVersion = DEFAULTS.schemaVersion
     end
 
-    normalizePosition(db, "launcher", DEFAULTS.launcher)
-    normalizePosition(db, "transmogLauncher", DEFAULTS.transmogLauncher)
+    normalizeMinimapPosition(db, "transmogMinimap", DEFAULTS.transmogMinimap)
+    -- v12 replaces the free-floating launchers with a transmog minimap button.
+    db.launcher = nil
+    db.transmogLauncher = nil
     repairScalar(db, "uiPlatform", "table", {})
     repairEnum(db.uiPlatform, "uiShell", { LEGACY = true, DRAGONUI = true }, DEFAULTS.uiPlatform.uiShell)
     repairScalar(db.uiPlatform, "positionMigrated", "boolean", DEFAULTS.uiPlatform.positionMigrated)
@@ -514,6 +524,12 @@ local function normalizeDatabase(db)
     repairEnum(db.filters, "armorType", VALID_ARMOR_TYPES, DEFAULTS.filters.armorType)
     repairEnum(db.filters, "slot", VALID_SLOTS, DEFAULTS.filters.slot)
     repairEnum(db.filters, "weaponType", VALID_WEAPON_TYPES, DEFAULTS.filters.weaponType)
+    -- v13 widens the initial wardrobe query. A player may still choose a
+    -- narrower armor or weapon subtype from the dropdown afterwards.
+    if incomingSchema < 13 then
+        if db.filters.armorType == "AUTO" then db.filters.armorType = "ALL" end
+        if db.filters.weaponType == "AUTO" then db.filters.weaponType = "ALL" end
+    end
     repairScalar(db.filters, "mounts", "table", {})
     repairScalar(db.filters.mounts, "unusable", "boolean", DEFAULTS.filters.mounts.unusable)
     repairScalar(db.filters.mounts, "ground", "boolean", DEFAULTS.filters.mounts.ground)
@@ -594,6 +610,7 @@ function SC:ResetLayoutAndFilters()
     end
     SoloCollectionsDB.launcher = nil
     SoloCollectionsDB.transmogLauncher = nil
+    SoloCollectionsDB.transmogMinimap = nil
     SoloCollectionsDB.frame = nil
     SoloCollectionsDB.transmogFrame = nil
     SoloCollectionsDB.mainTab = nil

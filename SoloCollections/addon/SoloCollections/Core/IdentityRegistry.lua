@@ -1,4 +1,5 @@
 local SC = SoloCollections
+local L = SC.Localize
 local generated = SC.GeneratedIdentityData or { classes = {}, races = {}, aliases = {} }
 
 SC.IdentityRegistry = SC.IdentityRegistry or {}
@@ -118,9 +119,14 @@ function Identity.GetPlayerRace()
 end
 
 function Identity.GetClassFilterOptions()
-    local options = { { key = "ALL", label = "全部职业" } }
+    local options = { { key = "ALL", label = L("All Classes", "全部职业") } }
     for _, entry in ipairs(generated.classes or {}) do
-        table.insert(options, { key = entry.filterToken, label = entry.name.zhCN or entry.name.enUS, identity = entry })
+        local name = entry.name or {}
+        table.insert(options, {
+            key = entry.filterToken,
+            label = L(name.enUS, name.zhCN),
+            identity = entry,
+        })
     end
     return options
 end

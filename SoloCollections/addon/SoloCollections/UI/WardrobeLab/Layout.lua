@@ -2,6 +2,7 @@ local SC = SoloCollections
 local UI = SC.UI
 local Lab = SC.WardrobeLab
 if not Lab then return end
+local L = SC.Localize
 
 local RACE_BACKGROUND = {
     Human = "Human",
@@ -95,7 +96,7 @@ local function createWeaponHandWarning(model)
     if text.SetJustifyV then text:SetJustifyV("BOTTOM") end
     if text.SetJustifyH then text:SetJustifyH("CENTER") end
     if text.SetNonSpaceWrap then text:SetNonSpaceWrap(true) end
-    text:SetText("武器可能会出现在错误的手中")
+    text:SetText(L("Weapons may appear in the wrong hand", "武器可能会出现在错误的手中"))
     warning.Text = text
     warning.scWantShown = false
 
@@ -242,7 +243,7 @@ function Lab.CreateLayout(page, state)
     moneyHit:EnableMouse(true)
     moneyHit:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText("幻化费用", 1, 0.82, 0.18)
+        GameTooltip:SetText(L("Transmogrification Cost", "幻化费用"), 1, 0.82, 0.18)
         local canApply, reason = false, nil
         if state.presetRecord and state.GetSetApplyState then
             canApply, reason = state:GetSetApplyState()
@@ -276,7 +277,7 @@ function Lab.CreateLayout(page, state)
     apply:SetWidth(112)
     apply:SetHeight(22)
     apply:SetPoint("BOTTOMRIGHT", left, "BOTTOMRIGHT", 0, -22)
-    apply:SetText("应用")
+    apply:SetText(L("Apply", "应用"))
     apply:SetFrameLevel(left:GetFrameLevel() + 16)
     apply:SetScript("OnClick", function()
         if Lab.BeginApplyWithWarnings then
@@ -288,7 +289,7 @@ function Lab.CreateLayout(page, state)
 
     local function showApplyTooltip(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText("应用", 1, 0.82, 0.18)
+        GameTooltip:SetText(L("Apply", "应用"), 1, 0.82, 0.18)
         if state.presetRecord then
             local canApply, reason, variantOwned, variantRequired = false, nil, nil, nil
             if state.GetSetApplyState then
@@ -299,7 +300,7 @@ function Lab.CreateLayout(page, state)
                 local required = tonumber(variantRequired) or tonumber(state.presetRecord.requiredCount) or #(state.presetRecord.itemIds or {})
                 GameTooltip:AddLine(Lab.ApplyReasonText and Lab.ApplyReasonText(reason, {
                     set = true, owned = owned, required = required,
-                }) or "当前套装预设暂不能提交应用。", 1, 0.35, 0.25, true)
+                }) or L("This outfit preset cannot be applied yet.", "当前套装预设暂不能提交应用。"), 1, 0.35, 0.25, true)
             end
         else
             local canApply, reason = false, nil
@@ -314,7 +315,7 @@ function Lab.CreateLayout(page, state)
                         GameTooltip:AddLine(
                             (Lab.ApplyReasonText and Lab.ApplyReasonText(entry.reason, {
                                 slotLabel = entry.label,
-                            })) or "当前待定外观暂不能提交应用。",
+                            })) or L("The pending appearance cannot be applied yet.", "当前待定外观暂不能提交应用。"),
                             1, 0.35, 0.25, true
                         )
                         listed = true
@@ -322,7 +323,7 @@ function Lab.CreateLayout(page, state)
                 end
                 if not listed then
                     GameTooltip:AddLine(
-                        (Lab.ApplyReasonText and Lab.ApplyReasonText(reason)) or "当前待定外观暂不能提交应用。",
+                        (Lab.ApplyReasonText and Lab.ApplyReasonText(reason)) or L("The pending appearance cannot be applied yet.", "当前待定外观暂不能提交应用。"),
                         1, 0.35, 0.25, true
                     )
                 end

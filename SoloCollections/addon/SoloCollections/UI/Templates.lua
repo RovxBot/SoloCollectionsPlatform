@@ -1,4 +1,5 @@
 local SC = SoloCollections
+local L = SC.Localize
 
 SC.UI = SC.UI or {}
 
@@ -646,7 +647,7 @@ function UI.CreateRetailSearchBox(parent, width, onTextChanged)
     icon:SetHeight(14)
     icon:SetPoint("LEFT", editBox, "LEFT", 6, 0)
 
-    local placeholder = createLabel(editBox, "GameFontDisableSmall", "搜索")
+    local placeholder = createLabel(editBox, "GameFontDisableSmall", L("Search", "搜索"))
     placeholder:SetPoint("LEFT", editBox, "LEFT", 24, 0)
 
     local clear = CreateFrame("Button", nil, editBox)
@@ -702,7 +703,7 @@ function UI.CreateFilterPopup(parent, width)
     setAllPoints(buttonBorder, button, 0)
     local buttonInner = createSolidTexture(button, "ARTWORK", 0.035, 0.035, 0.032, 1)
     setAllPoints(buttonInner, button, 2)
-    local buttonLabel = createLabel(button, "GameFontNormalSmall", "过滤器", COLORS.gold)
+    local buttonLabel = createLabel(button, "GameFontNormalSmall", L("Filters", "过滤器"), COLORS.gold)
     buttonLabel:SetPoint("CENTER", button, "CENTER", -7, 0)
     local arrow = button:CreateTexture(nil, "OVERLAY")
     arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
@@ -1216,7 +1217,7 @@ function UI.CreateMountListRow(parent, width, height, onSelect, onContext)
         end
         UI.SetIconTexture(icon, record.icon)
         UI.SetCollectedVisual(icon, record.collected)
-        name:SetText(record.name or "未知坐骑")
+        name:SetText(record.name or L("Unknown mount", "未知坐骑"))
         source:SetText(record.source or record.description or "")
         collectionBorder:SetCollected(record.collected)
         collectedTint:Hide()
@@ -1301,7 +1302,7 @@ function UI.CreateListRow(parent, width, height, onClick)
         self.scRecord = record
         if not record then self:Hide() return end
         UI.SetIconTexture(icon, record.icon)
-        name:SetText(record.name or "未知收藏")
+        name:SetText(record.name or L("Unknown collection", "未知收藏"))
         detail:SetText(record.source or record.description or "")
         collectionBorder:SetCollected(record.collected)
         UI.SetCollectedVisual(icon, record.collected)
@@ -1366,7 +1367,7 @@ function UI.CreateIconTile(parent, width, height, onClick)
         self.scRecord = record
         if not record then self:Hide() return end
         UI.SetIconTexture(icon, record.icon)
-        name:SetText(record.name or "未知收藏")
+        name:SetText(record.name or L("Unknown collection", "未知收藏"))
         border:SetCollected(record.collected)
         UI.SetCollectedVisual(icon, record.collected, 0.18)
         if record.favorite then star:Show() else star:Hide() end
@@ -1433,15 +1434,15 @@ function UI.CreateEmptyState(parent, message)
     state:SetHeight(120)
     local ornament = createLabel(state, "GameFontNormalHuge", "◆", COLORS.bronze)
     ornament:SetPoint("TOP", state, "TOP", 0, -8)
-    local title = createLabel(state, "GameFontNormalLarge", message or "没有符合条件的收藏", COLORS.gold)
+    local title = createLabel(state, "GameFontNormalLarge", message or L("No matching collections", "没有符合条件的收藏"), COLORS.gold)
     title:SetPoint("TOP", ornament, "BOTTOM", 0, -7)
-    local hint = createLabel(state, "GameFontDisableSmall", "调整搜索文字或过滤条件后再试。", COLORS.muted)
+    local hint = createLabel(state, "GameFontDisableSmall", L("Adjust the search or filters and try again.", "调整搜索文字或过滤条件后再试。"), COLORS.muted)
     hint:SetPoint("TOP", title, "BOTTOM", 0, -8)
     state.scTitle = title
     state.scHint = hint
     function state:SetMessage(text, detail)
-        title:SetText(text or "没有符合条件的收藏")
-        hint:SetText(detail or "调整搜索文字或过滤条件后再试。")
+        title:SetText(text or L("No matching collections", "没有符合条件的收藏"))
+        hint:SetText(detail or L("Adjust the search or filters and try again.", "调整搜索文字或过滤条件后再试。"))
     end
     return state
 end

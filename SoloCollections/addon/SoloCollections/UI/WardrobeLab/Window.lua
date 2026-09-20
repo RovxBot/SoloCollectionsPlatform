@@ -2,6 +2,7 @@ local SC = SoloCollections
 local UI = SC.UI
 local Lab = SC.WardrobeLab
 if not Lab then return end
+local L = SC.Localize
 
 local DESIGN_SCREEN_WIDTH = 1920
 local DESIGN_SCREEN_HEIGHT = 1080
@@ -83,7 +84,7 @@ function UI.CreateTransmogFrame()
         "SoloCollectionsWardrobeFrame",
         TRANSMOG_WIDTH,
         TRANSMOG_HEIGHT,
-        { title = "幻化", portrait = transmogPortraitPath() }
+        { title = L("Transmogrify", "幻化"), portrait = transmogPortraitPath() }
     )
     local dragonShell = UI.IsDragonUIShell and UI.IsDragonUIShell()
     frame:SetMovable(true)
@@ -93,7 +94,7 @@ function UI.CreateTransmogFrame()
     frame:Hide()
 
     if frame.Title then
-        frame.Title:SetText("幻化")
+        frame.Title:SetText(L("Transmogrify", "幻化"))
         frame.Title:SetTextColor(1, 0.82, 0.18)
     end
 
@@ -145,7 +146,7 @@ function UI.CreateTransmogFrame()
     local pageTitle = dragonShell and frame.Title or frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     if not dragonShell then
         pageTitle:SetPoint("TOP", frame, "TOP", 0, -17)
-        pageTitle:SetText("幻化")
+        pageTitle:SetText(L("Transmogrify", "幻化"))
         pageTitle:SetTextColor(1, 0.82, 0.18)
     end
 
@@ -196,8 +197,8 @@ function UI.CreateTransmogFrame()
     end)
     portraitButton:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("收藏", 1, 0.82, 0.18)
-        GameTooltip:AddLine("打开收藏手册。", 0.72, 0.72, 0.72)
+        GameTooltip:SetText(L("Collections", "收藏"), 1, 0.82, 0.18)
+        GameTooltip:AddLine(L("Open the collections journal.", "打开收藏手册。"), 0.72, 0.72, 0.72)
         GameTooltip:Show()
     end)
     portraitButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -239,7 +240,7 @@ function UI.CreateTransmogFrame()
     filterButton:SetHeight(22)
     filterButton:SetPoint("LEFT", search, "RIGHT", 2, -1)
     if filterButton.scLabel then
-        filterButton.scLabel:SetText("来源")
+        filterButton.scLabel:SetText(L("Sources", "来源"))
     end
     if filterButton.scArrow then
         filterButton.scArrow:SetTexCoord(0, 1, 0, 1)
@@ -474,7 +475,7 @@ function UI.SyncTransmogFilterChrome(mode, closeMenus)
     if not (frame and frame.scFilterButton) then return end
     if frame.scFilterPopup then frame.scFilterPopup:Hide() end
     if frame.scFilterButton.scLabel then
-        frame.scFilterButton.scLabel:SetText(mode == "SETS" and "过滤器" or "来源")
+        frame.scFilterButton.scLabel:SetText(mode == "SETS" and L("Filters", "过滤器") or L("Sources", "来源"))
     end
     if frame.scFilterButton.scArrow then
         frame.scFilterButton.scArrow:SetTexCoord(0, 1, 0, 1)
@@ -496,7 +497,7 @@ function UI.SyncTransmogClassDropDown(mode)
     local Identity = SC.IdentityRegistry
     local options = Identity and Identity.GetClassFilterOptions and Identity.GetClassFilterOptions() or {}
     local selected = SC.db and SC.db.filters and SC.db.filters.classToken or "ALL"
-    local label = "全部职业"
+    local label = L("All Classes", "全部职业")
     for _, option in ipairs(options) do
         if option.key == selected then
             label = option.label
@@ -518,7 +519,7 @@ function UI.GetTransmogArmorFilterOptions()
     for _, option in ipairs(source) do
         options[#options + 1] = option
     end
-    options[#options + 1] = { key = "ALL", label = "全部" }
+    options[#options + 1] = { key = "ALL", label = L("All", "全部") }
     return options
 end
 
@@ -563,7 +564,7 @@ function UI.SyncTransmogArmorDropDown(slot, mode)
         -- not the journal slot stored in SC.db.filters.slot.
         selected = SC.Catalog.ResolveArmorTypeForQuery({ armorType = "AUTO", slot = slot })
     end
-    local label = "全部"
+    local label = L("All", "全部")
     for _, option in ipairs(options) do
         if option.key == selected then
             label = option.label

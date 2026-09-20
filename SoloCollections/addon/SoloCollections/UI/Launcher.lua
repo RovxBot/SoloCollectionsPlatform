@@ -1,109 +1,64 @@
 local SC = SoloCollections
 local UI = SC.UI
 
-local COLLECTION_DEFAULT = { point = "BOTTOMRIGHT", x = -28, y = 150 }
-local TRANSMOG_DEFAULT = { point = "BOTTOMRIGHT", x = -82, y = 150 }
+local TRANSMOG_MINIMAP_DEFAULT_ANGLE = 225
 
-local function savedPosition(key, defaults)
-    local saved = SC.db and SC.db[key]
-    return {
-        point = (saved and saved.point) or defaults.point,
-        relativePoint = (saved and saved.relativePoint) or defaults.point,
-        x = (saved and saved.x) or defaults.x,
-        y = (saved and saved.y) or defaults.y,
+-- The verified local ezCollections 2.2 Transmogrify artwork is a 32x64
+-- micro-button with the usable glyph in its upper half.  Cropping the lower
+-- half selects transparent padding and leaves a malformed minimap button.
+local MICRO_BUTTON_ICON_COORD = { 0.08, 0.92, 0.02, 0.48 }
+
+local function normalizeMinimapAngle(value)
+    value = tonumber(value) or TRANSMOG_MINIMAP_DEFAULT_ANGLE
+    value = value % 360
+    if value < 0 then value = value + 360 end
+    return math.floor(value + 0.5) % 360
+end
+
+local function savedTransmogMinimapAngle()
+    local saved = SC.db and SC.db.transmogMinimap
+    return normalizeMinimapAngle(saved and saved.angle)
+end
+
+local function saveTransmogMinimapAngle(button, angle)
+    if not SC.db then return end
+    SC.db.transmogMinimap = {
+        angle = normalizeMinimapAngle(angle or button.scMinimapAngle),
     }
 end
 
-local function applySavedPosition(button, key, defaults)
-    local saved = savedPosition(key, defaults)
+local function positionTransmogMinimapButton(button, angle)
+    local minimap = _G.Minimap
+    -- DragonUI and other minimap-button collectors re-parent their managed
+    -- children. Leave their placement alone once that happens.
+    if not (button and minimap and button:GetParent() == minimap) then return false end
+
+    local width, height = minimap:GetWidth(), minimap:GetHeight()
+    if not width or not height or width <= 0 or height <= 0 then return false end
+
+    angle = normalizeMinimapAngle(angle)
+    local buttonSize = math.max(button:GetWidth() or 0, button:GetHeight() or 0)
+    local radius = math.max(12, math.min(width, height) * 0.5 - buttonSize * 0.5 + 6)
+    local radians = math.rad(angle)
     button:ClearAllPoints()
-    button:SetPoint(saved.point, UIParent, saved.relativePoint, saved.x, saved.y)
-    button:SetClampedToScreen(true)
+    button:SetPoint("CENTER", minimap, "CENTER", math.cos(radians) * radius, math.sin(radians) * radius)
+    button.scMinimapAngle = angle
+    return true
 end
 
-local function savePosition(button, key, defaults)
-    if not SC.db then
-        return
-    end
-    local point, _, relativePoint, x, y = button:GetPoint(1)
-    SC.db[key] = {
-        point = point or defaults.point,
-        relativePoint = relativePoint or defaults.point,
-        x = math.floor((x or defaults.x) + 0.5),
-        y = math.floor((y or defaults.y) + 0.5),
-    }
-end
+local function updateTransmogMinimapDrag(button)
+    local minimap = _G.Minimap
+    if not (minimap and button:GetParent() == minimap) then return end
 
-local MICRO_BUTTON_ICON_COORD = { 0.08, 0.92, 0.50, 0.98 }
-local SQUARE_ICON_COORD = { 0.08, 0.92, 0.08, 0.92 }
+    local centerX, centerY = minimap:GetCenter()
+    if not centerX or not centerY then return end
 
-local function createLauncherButton(name, iconTexture, tooltipTitle, tooltipBody, onClick, positionKey, defaults, iconTexCoord)
-    local button = CreateFrame("Button", name, UIParent)
-    button:SetWidth(46)
-    button:SetHeight(46)
-    button:SetFrameStrata("MEDIUM")
-    button:SetFrameLevel(20)
-    button:SetMovable(true)
-    button:EnableMouse(true)
-    button:SetClampedToScreen(true)
-    button:RegisterForClicks("LeftButtonUp")
-    button:RegisterForDrag("LeftButton")
-
-    local shadow = button:CreateTexture(nil, "BACKGROUND")
-    shadow:SetTexture("Interface\\Buttons\\WHITE8X8")
-    shadow:SetVertexColor(0, 0, 0, 0.48)
-    shadow:SetPoint("TOPLEFT", button, "TOPLEFT", 5, -6)
-    shadow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -3, 2)
-
-    local plate = button:CreateTexture(nil, "BACKGROUND")
-    plate:SetTexture("Interface\\Buttons\\WHITE8X8")
-    plate:SetVertexColor(0.025, 0.025, 0.022, 0.98)
-    plate:SetPoint("TOPLEFT", button, "TOPLEFT", 4, -4)
-    plate:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 4)
-
-    local icon = button:CreateTexture(nil, "ARTWORK")
-    icon:SetTexture(iconTexture)
-    icon:SetPoint("TOPLEFT", button, "TOPLEFT", 6, -6)
-    icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -6, 6)
-    icon:SetTexCoord(unpack(iconTexCoord or SQUARE_ICON_COORD))
-
-    local ring = button:CreateTexture(nil, "OVERLAY")
-    ring:SetTexture("Interface\\Buttons\\UI-Quickslot2")
-    ring:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
-    ring:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
-    ring:SetVertexColor(0.92, 0.78, 0.43, 1)
-
-    button:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
-
-    button:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:SetText(tooltipTitle)
-        GameTooltip:AddLine(tooltipBody, 0.82, 0.72, 0.52, true)
-        GameTooltip:Show()
-    end)
-    button:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-    button:SetScript("OnDragStart", function(self)
-        self.scWasDragged = true
-        self:StartMoving()
-        GameTooltip:Hide()
-    end)
-    button:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        self:SetClampedToScreen(true)
-        savePosition(self, positionKey, defaults)
-    end)
-    button:SetScript("OnClick", function(self)
-        if self.scWasDragged then
-            self.scWasDragged = nil
-            return
-        end
-        onClick()
-    end)
-
-    applySavedPosition(button, positionKey, defaults)
-    return button
+    local cursorX, cursorY = GetCursorPosition()
+    local scale = minimap:GetEffectiveScale() or 1
+    if scale <= 0 then scale = 1 end
+    local angle = math.deg(math.atan2(cursorY / scale - centerY, cursorX / scale - centerX))
+    if angle < 0 then angle = angle + 360 end
+    positionTransmogMinimapButton(button, angle)
 end
 
 local function transmogIconPath()
@@ -121,52 +76,116 @@ local function transmogIconPath()
     return "Interface\\Icons\\INV_Chest_Cloth_17"
 end
 
+local function createTransmogMinimapButton()
+    local minimap = _G.Minimap
+    if not minimap then return nil end
+
+    local button = CreateFrame("Button", "SoloCollectionsTransmogMinimapButton", minimap)
+    button:SetWidth(31)
+    button:SetHeight(31)
+    button:SetFrameStrata("MEDIUM")
+    button:SetFrameLevel(8)
+    button:SetMovable(true)
+    button:EnableMouse(true)
+    button:SetClampedToScreen(true)
+    button:RegisterForClicks("LeftButtonUp")
+    button:RegisterForDrag("LeftButton")
+
+    local icon = button:CreateTexture(nil, "ARTWORK")
+    icon:SetTexture(transmogIconPath())
+    icon:SetPoint("TOPLEFT", button, "TOPLEFT", 3, -3)
+    icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -3, 3)
+    icon:SetTexCoord(unpack(MICRO_BUTTON_ICON_COORD))
+    button.icon = icon
+
+    local border = button:CreateTexture(nil, "OVERLAY")
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    border:SetPoint("TOPLEFT", button, "TOPLEFT", -4, 4)
+    border:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 4, -4)
+
+    button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight", "ADD")
+    button:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:SetText(SC.Localize("Transmogrify", "幻化"))
+        GameTooltip:AddLine(SC.Localize(
+            "Click to open the Transmog window. Drag to move this button.",
+            "点击打开幻化室。拖动可改变小地图位置。"
+        ), 0.82, 0.72, 0.52, true)
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    button:SetScript("OnDragStart", function(self)
+        if self:GetParent() ~= minimap then return end
+        self.scMinimapDragging = true
+        self.scMinimapWasDragged = true
+        self:SetScript("OnUpdate", updateTransmogMinimapDrag)
+        GameTooltip:Hide()
+    end)
+    button:SetScript("OnDragStop", function(self)
+        self:SetScript("OnUpdate", nil)
+        if not self.scMinimapDragging then return end
+        self.scMinimapDragging = nil
+        updateTransmogMinimapDrag(self)
+        saveTransmogMinimapAngle(self)
+    end)
+    button:SetScript("OnClick", function(self)
+        if self.scMinimapWasDragged then
+            self.scMinimapWasDragged = nil
+            return
+        end
+        if SC.ToggleTransmog then
+            SC:ToggleTransmog()
+        elseif UI.ToggleTransmog then
+            UI.ToggleTransmog()
+        end
+    end)
+    button:SetScript("OnShow", function(self)
+        positionTransmogMinimapButton(self, savedTransmogMinimapAngle())
+    end)
+    button:SetScript("OnHide", function(self)
+        self:SetScript("OnUpdate", nil)
+    end)
+
+    if not minimap.scTransmogMinimapSizeHooked then
+        minimap.scTransmogMinimapSizeHooked = true
+        minimap:HookScript("OnSizeChanged", function()
+            if UI.TransmogMinimapButton then
+                positionTransmogMinimapButton(UI.TransmogMinimapButton, savedTransmogMinimapAngle())
+            end
+        end)
+    end
+
+    positionTransmogMinimapButton(button, savedTransmogMinimapAngle())
+    return button
+end
+
 function UI.CreateLauncher()
     if SC.UIPlatform and not SC.UIPlatform:CanCreateUI() then return nil end
 
-    if not UI.Launcher then
-        UI.Launcher = createLauncherButton(
-            "SoloCollectionsLauncher",
-            UI.Media.collectionsLauncher,
-            "收藏",
-            "点击打开收藏日志，拖动可改变位置。",
-            function()
-                SC:ToggleJournal()
-            end,
-            "launcher",
-            COLLECTION_DEFAULT,
-            MICRO_BUTTON_ICON_COORD
-        )
+    -- DragonUI owns the mounts/pets entry. The old free-floating launchers are
+    -- intentionally retired; hide them too when a development tool reloads
+    -- this file without a full UI reload.
+    if UI.Launcher then
+        UI.Launcher:Hide()
+        UI.Launcher = nil
+    end
+    if UI.TransmogLauncher then
+        UI.TransmogLauncher:Hide()
+        UI.TransmogLauncher = nil
     end
 
-    if not UI.TransmogLauncher then
-        UI.TransmogLauncher = createLauncherButton(
-            "SoloCollectionsTransmogLauncher",
-            transmogIconPath(),
-            "幻化",
-            "点击打开幻化室，拖动可改变位置。",
-            function()
-                if SC.ToggleTransmog then
-                    SC:ToggleTransmog()
-                elseif UI.ToggleTransmog then
-                    UI.ToggleTransmog()
-                end
-            end,
-            "transmogLauncher",
-            TRANSMOG_DEFAULT,
-            MICRO_BUTTON_ICON_COORD
-        )
+    if not UI.TransmogMinimapButton then
+        UI.TransmogMinimapButton = createTransmogMinimapButton()
     end
 
-    return UI.Launcher
+    return UI.TransmogMinimapButton
 end
 
 function UI.ResetPositions()
-    if UI.Launcher then
-        applySavedPosition(UI.Launcher, "launcher", COLLECTION_DEFAULT)
-    end
-    if UI.TransmogLauncher then
-        applySavedPosition(UI.TransmogLauncher, "transmogLauncher", TRANSMOG_DEFAULT)
+    if UI.TransmogMinimapButton then
+        positionTransmogMinimapButton(UI.TransmogMinimapButton, savedTransmogMinimapAngle())
     end
     if UI.CollectionsFrame then
         if SC.UIPlatform and SC.UIPlatform:IsDragonUIShell() then

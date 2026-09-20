@@ -457,7 +457,11 @@ function WardrobeItemsModelMixin:PrepareTransmorpherFrame()
     self.frame:SetScript("OnUpdate", nil)
     safeCall(self.frame, "SetAutoDress", true)
     safeCall(self.frame, "SetDoBlend", true)
-    safeCall(self.frame, "SetKeepModelOnHide", false)
+    -- A recycled card can briefly be hidden by the surrounding Transmog
+    -- frame while its item-cache callback is still pending.  Keeping its
+    -- actor prevents a successful TryOn from flashing once and then being
+    -- discarded before the card is painted.
+    safeCall(self.frame, "SetKeepModelOnHide", true)
     safeCall(self.frame, "SetAlpha", 1)
     safeCall(self.frame, "SetModelScale", 1)
 

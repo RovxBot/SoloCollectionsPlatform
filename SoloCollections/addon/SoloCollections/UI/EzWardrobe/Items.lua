@@ -1,4 +1,5 @@
 local SC = SoloCollections
+local L = SC.Localize
 local UI = SC.UI
 
 SC.EzWardrobe = SC.EzWardrobe or {}
@@ -76,7 +77,7 @@ local function createCard(parent, index, callbacks)
     unavailableText:SetPoint("TOPLEFT", unavailable, "TOPLEFT", 4, -68)
     unavailableText:SetPoint("TOPRIGHT", unavailable, "TOPRIGHT", -4, -68)
     unavailableText:SetJustifyH("CENTER")
-    unavailableText:SetText("资源未就绪")
+    unavailableText:SetText(L("Data unavailable", "资源未就绪"))
     unavailable:Hide()
 
     local hit = CreateFrame("Button", nil, itemCard, "SoloCollectionsEzWardrobeItemHitTemplate")
@@ -124,7 +125,7 @@ local function createCard(parent, index, callbacks)
     local stateLabel = collectionState:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     stateLabel:SetAllPoints(collectionState)
     stateLabel:SetJustifyH("CENTER")
-    stateLabel:SetText("未收集")
+    stateLabel:SetText(L("Not Collected", "未收集"))
     stateLabel:SetTextColor(0.72, 0.73, 0.74)
     collectionState:Hide()
 
@@ -197,7 +198,7 @@ function Items:UpdateCardState(itemModel, selectedId)
         end
         return
     end
-    itemModel.scName:SetText(record.name or "未知外观")
+    itemModel.scName:SetText(record.name or L("Unknown appearance", "未知外观"))
     itemModel.scName:SetTextColor(record.collected and 1.00 or 0.62, record.collected and 0.82 or 0.62, record.collected and 0.18 or 0.60)
     itemModel.scBorder:SetCollected(record.collected)
     if record.collected then

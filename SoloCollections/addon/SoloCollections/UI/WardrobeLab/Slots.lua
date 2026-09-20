@@ -2,6 +2,7 @@ local SC = SoloCollections
 local UI = SC.UI
 local Lab = SC.WardrobeLab
 if not Lab then return end
+local L = SC.Localize
 
 local SLOT_POINTS = {
     HEAD = { "TOP", -121, -41 },
@@ -65,7 +66,7 @@ function Lab.CreateSlots(parent, state)
         emptyBlock:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText(definition.label, 1, 0.82, 0.18)
-            GameTooltip:AddLine(Lab.EMPTY_SLOT_TEXT or "该装备栏里没有装备物品。", 1, 0.12, 0.12, true)
+            GameTooltip:AddLine(Lab.EMPTY_SLOT_TEXT or L("There is no item equipped in this slot.", "该装备栏里没有装备物品。"), 1, 0.12, 0.12, true)
             GameTooltip:Show()
         end)
         emptyBlock:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -107,7 +108,7 @@ function Lab.CreateSlots(parent, state)
             if occupied == nil then occupied = titleOccupied end
             if not occupied then
                 GameTooltip:SetText(self.scDefinition.label, 1, 0.82, 0.18)
-                GameTooltip:AddLine(Lab.EMPTY_SLOT_TEXT or "该装备栏里没有装备物品。", 1, 0.12, 0.12, true)
+                GameTooltip:AddLine(Lab.EMPTY_SLOT_TEXT or L("There is no item equipped in this slot.", "该装备栏里没有装备物品。"), 1, 0.12, 0.12, true)
                 GameTooltip:Show()
                 return
             end
@@ -122,26 +123,26 @@ function Lab.CreateSlots(parent, state)
                 and not (Lab.IsCollectedRecord and Lab.IsCollectedRecord(draft))
             if pendingUncollected then
                 GameTooltip:AddLine(
-                    (Lab.ApplyReasonText and Lab.ApplyReasonText("NOT_OWNED")) or "你尚未收集此外观。",
+                    (Lab.ApplyReasonText and Lab.ApplyReasonText("NOT_OWNED")) or L("You have not collected this appearance.", "你尚未收集此外观。"),
                     1, 0.12, 0.12, true
                 )
             elseif hidden then
-                Lab.AppendTransmogLines(GameTooltip, "隐藏", pending, true)
+                Lab.AppendTransmogLines(GameTooltip, L("Hidden", "隐藏"), pending, true)
             elseif pending then
                 if itemId then
                     local record = Lab.FindAppearanceRecord and Lab.FindAppearanceRecord(nil, itemId)
                     local appearanceName = (record and record.name)
                         or (GetItemInfo and GetItemInfo(itemId))
-                        or ("物品 " .. tostring(itemId))
+                        or (L("Item ", "物品 ") .. tostring(itemId))
                     Lab.AppendTransmogLines(GameTooltip, appearanceName, true, false)
                 end
             elseif (name or occupied) and Lab.AddInventoryTransmogTooltip then
                 Lab.AddInventoryTransmogTooltip(GameTooltip, invSlot)
             end
             if pending then
-                GameTooltip:AddLine("右键撤销", 1, 0.5, 1)
+                GameTooltip:AddLine(L("Right-click to undo", "右键撤销"), 1, 0.5, 1)
             elseif state.CanClearAppliedSlot and state:CanClearAppliedSlot(self.scSlotKey) then
-                GameTooltip:AddLine("右键恢复原样（需确认）", 1, 0.5, 1)
+                GameTooltip:AddLine(L("Right-click to restore the original appearance (confirmation required)", "右键恢复原样（需确认）"), 1, 0.5, 1)
             end
             GameTooltip:Show()
         end)
@@ -198,8 +199,8 @@ function Lab.CreateSlots(parent, state)
         tip:EnableMouse(true)
         tip:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText("武器附魔", 1, 0.82, 0.18)
-            GameTooltip:AddLine("附魔幻化尚未接入服务端，当前不能预览或应用。", 0.72, 0.72, 0.72, true)
+            GameTooltip:SetText(L("Weapon Enchant", "武器附魔"), 1, 0.82, 0.18)
+            GameTooltip:AddLine(L("Enchant transmogrification is not supported by the server yet, so it cannot be previewed or applied.", "附魔幻化尚未接入服务端，当前不能预览或应用。"), 0.72, 0.72, 0.72, true)
             GameTooltip:Show()
         end)
         tip:SetScript("OnLeave", function() GameTooltip:Hide() end)

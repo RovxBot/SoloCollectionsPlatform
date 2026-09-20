@@ -346,7 +346,8 @@ public:
     // Cloth/leather/mail/plate subclass mixing follows
     // SoloCollections.Transmog.MixedArmor (same/lower/any), not the NPC
     // Transmogrification.AllowMixedArmorTypes flag. Weapon subclass mixing
-    // follows SoloCollections.Transmog.MixedWeapons (same/family/any).
+    // follows SoloCollections.Transmog.MixedWeapons (same/family/any); even
+    // with `any`, a two-handed visual is restricted to a two-handed target.
     bool CanApplyCollectedVisual(Player* player, ItemTemplate const* destination, ItemTemplate const* source) const;
     bool SuitableForTransmogrification(Player* player, ItemTemplate const* proto) const;
     bool SuitableForTransmogrification(ObjectGuid guid, ItemTemplate const* proto) const;

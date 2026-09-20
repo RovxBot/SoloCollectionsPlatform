@@ -2,12 +2,13 @@ local SC = SoloCollections
 local UI = SC.UI
 local Lab = SC.WardrobeLab
 if not Lab then return end
+local L = SC.Localize
 
 if StaticPopupDialogs then
 StaticPopupDialogs["SOLOCOLLECTIONS_SAVE_TRANSMOG_OUTFIT"] = {
-    text = "输入幻化方案名称：",
-    button1 = "保存",
-    button2 = "取消",
+    text = L("Enter an outfit name:", "输入幻化方案名称："),
+    button1 = L("Save", "保存"),
+    button2 = L("Cancel", "取消"),
     hasEditBox = 1,
     maxLetters = 48,
     timeout = 0,
@@ -62,8 +63,8 @@ StaticPopupDialogs["SOLOCOLLECTIONS_SAVE_TRANSMOG_OUTFIT"] = {
 
 StaticPopupDialogs["SOLOCOLLECTIONS_TRANSMOG_CONFIRM"] = {
     text = "%s",
-    button1 = "确定",
-    button2 = "取消",
+    button1 = L("OK", "确定"),
+    button2 = L("Cancel", "取消"),
     timeout = 0,
     whileDead = 1,
     hideOnEscape = 1,
@@ -80,8 +81,8 @@ StaticPopupDialogs["SOLOCOLLECTIONS_TRANSMOG_CONFIRM"] = {
 
 StaticPopupDialogs["SOLOCOLLECTIONS_TRANSMOG_APPLY"] = {
     text = "%s",
-    button1 = "应用",
-    button2 = "取消",
+    button1 = L("Apply", "应用"),
+    button2 = L("Cancel", "取消"),
     hasMoneyFrame = 1,
     showAlert = 1,
     timeout = 0,
@@ -111,7 +112,7 @@ StaticPopupDialogs["SOLOCOLLECTIONS_TRANSMOG_APPLY"] = {
 
 StaticPopupDialogs["SOLOCOLLECTIONS_TRANSMOG_NOTICE"] = {
     text = "%s",
-    button1 = "确定",
+    button1 = L("OK", "确定"),
     timeout = 0,
     whileDead = 1,
     hideOnEscape = 1,
@@ -129,9 +130,9 @@ local function promptSave(state, mode)
     Lab.pendingOutfitMode = mode or "save"
     if StaticPopupDialogs and StaticPopupDialogs["SOLOCOLLECTIONS_SAVE_TRANSMOG_OUTFIT"] then
         if mode == "rename" then
-            StaticPopupDialogs["SOLOCOLLECTIONS_SAVE_TRANSMOG_OUTFIT"].text = "输入新的方案名称："
+            StaticPopupDialogs["SOLOCOLLECTIONS_SAVE_TRANSMOG_OUTFIT"].text = L("Enter a new outfit name:", "输入新的方案名称：")
         else
-            StaticPopupDialogs["SOLOCOLLECTIONS_SAVE_TRANSMOG_OUTFIT"].text = "输入幻化方案名称："
+            StaticPopupDialogs["SOLOCOLLECTIONS_SAVE_TRANSMOG_OUTFIT"].text = L("Enter an outfit name:", "输入幻化方案名称：")
         end
     end
     if StaticPopup_Show then
@@ -162,7 +163,7 @@ function Lab.CreateOutfits(parent, state)
 
     local function chooseEquipped()
         if state:HasDraft() then
-            Lab.Confirm("切换到当前装备会清除未应用的待定幻化。", applyEquipped)
+            Lab.Confirm(L("Switching to current equipment clears pending changes that have not been applied.", "切换到当前装备会清除未应用的待定幻化。"), applyEquipped)
         else
             applyEquipped()
         end
@@ -170,7 +171,7 @@ function Lab.CreateOutfits(parent, state)
 
     UIDropDownMenu_Initialize(dropdown, function()
         local equippedInfo = UIDropDownMenu_CreateInfo()
-        equippedInfo.text = "当前装备"
+        equippedInfo.text = L("Current Equipment", "当前装备")
         equippedInfo.checked = not state:HasDraft() and not state.activeOutfitUid
         equippedInfo.func = chooseEquipped
         UIDropDownMenu_AddButton(equippedInfo)
@@ -178,9 +179,9 @@ function Lab.CreateOutfits(parent, state)
         if state:HasDraft() then
             local draftInfo = UIDropDownMenu_CreateInfo()
             if state.presetRecord then
-                draftInfo.text = "套装预设：" .. tostring(state.presetRecord.name or state.presetRecord.id)
+                draftInfo.text = L("Outfit preset: ", "套装预设：") .. tostring(state.presetRecord.name or state.presetRecord.id)
             else
-                draftInfo.text = "未保存方案（" .. state:GetDirtyCount() .. " 槽）"
+                draftInfo.text = L("Unsaved outfit (", "未保存方案（") .. state:GetDirtyCount() .. L(" slots)", " 槽）")
             end
             draftInfo.checked = state:HasDraft() and not state.activeOutfitUid
             draftInfo.func = function() state:Notify("DRAFT_SELECTED") end
@@ -202,7 +203,7 @@ function Lab.CreateOutfits(parent, state)
             info.func = function()
                 local selected = outfit
                 if state:HasDraft() then
-                    Lab.Confirm("载入方案会替换当前未应用的待定幻化。", function()
+                    Lab.Confirm(L("Loading an outfit replaces pending changes that have not been applied.", "载入方案会替换当前未应用的待定幻化。"), function()
                         state:LoadOutfit(selected)
                     end)
                 else
@@ -219,7 +220,7 @@ function Lab.CreateOutfits(parent, state)
         UIDropDownMenu_AddButton(actions)
 
         local saveInfo = UIDropDownMenu_CreateInfo()
-        saveInfo.text = Lab.IsOutfitReady and Lab.IsOutfitReady() and "保存新方案…" or "保存新方案…（账号方案未就绪）"
+        saveInfo.text = Lab.IsOutfitReady and Lab.IsOutfitReady() and L("Save New Outfit…", "保存新方案…") or L("Save New Outfit… (account outfits are syncing)", "保存新方案…（账号方案未就绪）")
         saveInfo.notCheckable = true
         saveInfo.disabled = not state:HasDraft() or not (Lab.IsOutfitReady and Lab.IsOutfitReady())
         saveInfo.func = function() promptSave(state) end
@@ -228,11 +229,11 @@ function Lab.CreateOutfits(parent, state)
         local localOutfits = Lab.GetLocalOutfits and Lab.GetLocalOutfits() or {}
         if #localOutfits > 0 and Lab.IsOutfitReady and Lab.IsOutfitReady() then
             local uploadInfo = UIDropDownMenu_CreateInfo()
-            uploadInfo.text = "上传本地方案…"
+            uploadInfo.text = L("Upload Local Outfit…", "上传本地方案…")
             uploadInfo.notCheckable = true
             uploadInfo.func = function()
                 local first = localOutfits[1]
-                Lab.Confirm("把本机保存的「" .. tostring(first.name) .. "」上传到账号？不会在登录时自动灌库。", function()
+                Lab.Confirm(L("Upload the locally saved outfit \"" .. tostring(first.name) .. "\" to your account? It will not be uploaded automatically at login.", "把本机保存的「" .. tostring(first.name) .. "」上传到账号？不会在登录时自动灌库。"), function()
                     if state.UploadLocalOutfit then state:UploadLocalOutfit(first) end
                 end)
             end
@@ -241,10 +242,10 @@ function Lab.CreateOutfits(parent, state)
 
         if Lab.IsAppliedReady and Lab.IsAppliedReady() then
             local clearAppliedInfo = UIDropDownMenu_CreateInfo()
-            clearAppliedInfo.text = "清除已应用幻化…"
+            clearAppliedInfo.text = L("Clear Applied Transmogrification…", "清除已应用幻化…")
             clearAppliedInfo.notCheckable = true
             clearAppliedInfo.func = function()
-                Lab.Confirm("清除当前角色已写入的幻化？待定预览不会自动恢复。", function()
+                Lab.Confirm(L("Clear transmogrification already applied to this character? Pending previews will not be restored automatically.", "清除当前角色已写入的幻化？待定预览不会自动恢复。"), function()
                     if state.ClearApplied then state:ClearApplied() end
                 end)
             end
@@ -253,31 +254,31 @@ function Lab.CreateOutfits(parent, state)
 
         if state.activeOutfitUid then
             local overwriteInfo = UIDropDownMenu_CreateInfo()
-            overwriteInfo.text = "覆盖当前方案"
+            overwriteInfo.text = L("Overwrite Current Outfit", "覆盖当前方案")
             overwriteInfo.notCheckable = true
             overwriteInfo.disabled = not state:HasDraft()
             overwriteInfo.func = function()
                 local uid = state.activeOutfitUid
-                local name = UIDropDownMenu_GetText and UIDropDownMenu_GetText(dropdown) or "当前方案"
-                Lab.Confirm("用当前待定外观覆盖方案「" .. tostring(name) .. "」？", function()
+                local name = UIDropDownMenu_GetText and UIDropDownMenu_GetText(dropdown) or L("Current Outfit", "当前方案")
+                Lab.Confirm(L("Overwrite outfit \"" .. tostring(name) .. "\" with the current pending appearance?", "用当前待定外观覆盖方案「" .. tostring(name) .. "」？"), function()
                     state:OverwriteOutfit(uid)
                 end)
             end
             UIDropDownMenu_AddButton(overwriteInfo)
 
             local renameInfo = UIDropDownMenu_CreateInfo()
-            renameInfo.text = "重命名当前方案…"
+            renameInfo.text = L("Rename Current Outfit…", "重命名当前方案…")
             renameInfo.notCheckable = true
             renameInfo.func = function() promptSave(state, "rename") end
             UIDropDownMenu_AddButton(renameInfo)
 
             local deleteInfo = UIDropDownMenu_CreateInfo()
-            deleteInfo.text = "删除当前方案"
+            deleteInfo.text = L("Delete Current Outfit", "删除当前方案")
             deleteInfo.notCheckable = true
             deleteInfo.func = function()
                 local uid = state.activeOutfitUid
-                local name = UIDropDownMenu_GetText and UIDropDownMenu_GetText(dropdown) or "当前方案"
-                Lab.Confirm("删除方案「" .. tostring(name) .. "」？此操作不能撤销。", function()
+                local name = UIDropDownMenu_GetText and UIDropDownMenu_GetText(dropdown) or L("Current Outfit", "当前方案")
+                Lab.Confirm(L("Delete outfit \"" .. tostring(name) .. "\"? This cannot be undone.", "删除方案「" .. tostring(name) .. "」？此操作不能撤销。"), function()
                     state:DeleteOutfit(uid)
                 end)
             end
@@ -300,7 +301,7 @@ function Lab.CreateOutfits(parent, state)
     clear:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
     clear:SetScript("OnClick", function()
         if not state:HasDraft() then return end
-        Lab.Confirm("清除全部待定幻化？不会改动已经应用到装备的外观。", function()
+        Lab.Confirm(L("Clear all pending transmogrification? This does not alter appearances already applied to equipment.", "清除全部待定幻化？不会改动已经应用到装备的外观。"), function()
             state:ClearDraft()
             state.activeOutfitUid = nil
             if Lab.PlaySound then Lab.PlaySound("revert") end
@@ -308,8 +309,8 @@ function Lab.CreateOutfits(parent, state)
     end)
     clear:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("撤销所有待定幻化", 1, 0.82, 0.18)
-        GameTooltip:AddLine("点击后会弹出确认，不会立即清除。", 0.72, 0.72, 0.72, true)
+        GameTooltip:SetText(L("Undo All Pending Changes", "撤销所有待定幻化"), 1, 0.82, 0.18)
+        GameTooltip:AddLine(L("A confirmation is required; nothing is cleared immediately.", "点击后会弹出确认，不会立即清除。"), 0.72, 0.72, 0.72, true)
         GameTooltip:Show()
     end)
     clear:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -328,11 +329,11 @@ function Lab.CreateOutfits(parent, state)
         if activeName then
             UIDropDownMenu_SetText(dropdown, activeName)
         elseif state.presetRecord then
-            UIDropDownMenu_SetText(dropdown, "套装预设：" .. tostring(state.presetRecord.name or state.presetRecord.id))
+            UIDropDownMenu_SetText(dropdown, L("Outfit preset: ", "套装预设：") .. tostring(state.presetRecord.name or state.presetRecord.id))
         elseif dirtyCount > 0 then
-            UIDropDownMenu_SetText(dropdown, "未保存方案（" .. dirtyCount .. " 槽）")
+            UIDropDownMenu_SetText(dropdown, L("Unsaved outfit (", "未保存方案（") .. dirtyCount .. L(" slots)", " 槽）"))
         else
-            UIDropDownMenu_SetText(dropdown, "当前装备")
+            UIDropDownMenu_SetText(dropdown, L("Current Equipment", "当前装备"))
         end
         if state:HasDraft() then clear:Show() else clear:Hide() end
     end

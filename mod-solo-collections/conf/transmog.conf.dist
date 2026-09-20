@@ -62,9 +62,9 @@ SoloCollections.Preview.Enabled = 1
 #                             MISC armor (no armor type, e.g. some boots) may mix with a
 #                             tiered appearance of the same InventoryType.
 #
-#        Default:     same
+#        Default:     any
 #
-SoloCollections.Transmog.MixedArmor = same
+SoloCollections.Transmog.MixedArmor = any
 
 #    SoloCollections.Transmog.MixedWeapons
 #        Description: Wardrobe collected-apply only. Does not change NPC vendor
@@ -81,12 +81,14 @@ SoloCollections.Transmog.MixedArmor = same
 #                              2H axe / sword / mace / staff / polearm may mix with each other.
 #                              Dagger, fist, wand, thrown, and other subclasses still need
 #                              an exact subclass match.
-#                     any    - any melee onto any melee; any bow / gun / crossbow onto
-#                              any bow / gun / crossbow. The isolation above still applies.
+#                     any    - any eligible weapon subtype within its weapon group.
+#                              Two-handed appearances only apply to two-handed weapons;
+#                              main-hand, off-hand, and generic one-hand weapons may mix.
+#                              The bow / gun / crossbow isolation above still applies.
 #
-#        Default:     same
+#        Default:     any
 #
-SoloCollections.Transmog.MixedWeapons = same
+SoloCollections.Transmog.MixedWeapons = any
 
 #
 ###################################################################################################

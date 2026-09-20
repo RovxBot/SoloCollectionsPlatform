@@ -47,8 +47,8 @@ class WardrobeProjectionContractTests(unittest.TestCase):
         self.assertIn("Hide and clear are free", config)
         self.assertIn("# SoloCollections.Transmog.ApplyBaseCopper = 0", config)
         self.assertIn("# SoloCollections.Transmog.ApplySlotCopper = 0", config)
-        self.assertIn("SoloCollections.Transmog.MixedArmor = same", config)
-        self.assertIn("SoloCollections.Transmog.MixedWeapons = same", config)
+        self.assertIn("SoloCollections.Transmog.MixedArmor = any", config)
+        self.assertIn("SoloCollections.Transmog.MixedWeapons = any", config)
 
     def test_collected_visual_uses_wardrobe_mixed_armor_policy(self):
         header = (SRC / "Transmogrification.h").read_text(encoding="utf-8")
@@ -61,6 +61,13 @@ class WardrobeProjectionContractTests(unittest.TestCase):
         self.assertIn("ParseCollectedMixedWeapons", transmog)
         self.assertIn("CollectedMixedArmorPolicy == MIXED_ARMOR_ANY", transmog)
         self.assertIn("CollectedMixedWeaponPolicy == MIXED_WEAPONS_LOOSE", transmog)
+        self.assertIn('"SoloCollections.Transmog.MixedArmor", "any"', transmog)
+        self.assertIn('"SoloCollections.Transmog.MixedWeapons", "any"', transmog)
+        self.assertIn("bool CollectedWeaponHandednessMatches", transmog)
+        self.assertIn("target->InventoryType == INVTYPE_2HWEAPON", transmog)
+        self.assertIn("source->InventoryType == INVTYPE_2HWEAPON", transmog)
+        self.assertIn("!CollectedWeaponHandednessMatches(target, source)", transmog)
+        self.assertIn("bool broadCollectedWeaponMix", transmog)
         self.assertIn("ITEM_SUBCLASS_ARMOR_MISC", transmog)
         self.assertIn("The player is already wearing `target`", transmog)
         self.assertNotIn(

@@ -22,3 +22,20 @@ SC.WARDROBE_TABS = {
 SC.Data = SC.Data or {}
 SC.Pages = SC.Pages or {}
 SC.UI = SC.UI or {}
+
+-- Keep presentation text readable on English clients.  Most of the generated
+-- catalog carries both names, but the original UI shell was authored on a
+-- zhCN client and also has a small number of hand-written labels.  A single
+-- locale helper keeps those call sites explicit without changing the
+-- server-authoritative data or action protocol.
+function SC.IsChineseLocale()
+    local locale = type(GetLocale) == "function" and GetLocale() or "enUS"
+    return locale == "zhCN" or locale == "zhTW"
+end
+
+function SC.Localize(enUS, zhCN)
+    if SC.IsChineseLocale() then
+        return zhCN or enUS or ""
+    end
+    return enUS or zhCN or ""
+end

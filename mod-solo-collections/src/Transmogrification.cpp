@@ -884,6 +884,17 @@ bool CollectedWeaponFamilyAllowed(uint32 targetSub, uint32 sourceSub)
             return false;
     }
 }
+
+// Collected wardrobe appearances intentionally support broad weapon subclass
+// mixing, but a two-handed visual must never be written onto a one-handed
+// item (or the reverse). Keep this separate from the legacy NPC config: a
+// runtime setting such as AllowMixedWeaponTypes=FULL must not relax the
+// wardrobe handedness invariant.
+bool CollectedWeaponHandednessMatches(ItemTemplate const* target, ItemTemplate const* source)
+{
+    return (target->InventoryType == INVTYPE_2HWEAPON)
+        == (source->InventoryType == INVTYPE_2HWEAPON);
+}
 }
 
 bool Transmogrification::CanApplyCollectedVisual(Player* player, ItemTemplate const* target, ItemTemplate const* source) const
@@ -916,6 +927,10 @@ bool Transmogrification::CanApplyCollectedVisual(Player* player, ItemTemplate co
     // The player is already wearing `target`. NPC SuitableFor gates
     // (armor skill, AllowableClass) must not block a collected visual.
     if (IsRangedWeapon(source->Class, source->SubClass) != IsRangedWeapon(target->Class, target->SubClass))
+        return false;
+
+    if (source->Class == ITEM_CLASS_WEAPON && target->Class == ITEM_CLASS_WEAPON
+        && !CollectedWeaponHandednessMatches(target, source))
         return false;
 
     if (source->SubClass != target->SubClass)
@@ -960,8 +975,18 @@ bool Transmogrification::CanApplyCollectedVisual(Player* player, ItemTemplate co
             return false;
     }
 
-    if (source->InventoryType != target->InventoryType && !IsInvTypeMismatchAllowed(source, target))
-        return false;
+    if (source->InventoryType != target->InventoryType)
+    {
+        // The broad collected-wardrobe rule treats the main-hand, off-hand,
+        // and generic one-hand inventory types as one group. The explicit
+        // two-hand guard above remains in force. Narrower policies keep the
+        // legacy inventory-type rule.
+        bool broadCollectedWeaponMix = source->Class == ITEM_CLASS_WEAPON
+            && target->Class == ITEM_CLASS_WEAPON
+            && CollectedMixedWeaponPolicy == MIXED_WEAPONS_LOOSE;
+        if (!broadCollectedWeaponMix && !IsInvTypeMismatchAllowed(source, target))
+            return false;
+    }
 
     return true;
 }
@@ -1436,9 +1461,9 @@ void Transmogrification::LoadConfig(bool reload)
     AllowMixedArmorTypes = sConfigMgr->GetOption<bool>("Transmogrification.AllowMixedArmorTypes", false);
     AllowLowerTiers = sConfigMgr->GetOption<bool>("Transmogrification.AllowLowerTiers", false);
     CollectedMixedArmorPolicy = ParseCollectedMixedArmor(
-        sConfigMgr->GetOption<std::string>("SoloCollections.Transmog.MixedArmor", "same"));
+        sConfigMgr->GetOption<std::string>("SoloCollections.Transmog.MixedArmor", "any"));
     CollectedMixedWeaponPolicy = ParseCollectedMixedWeapons(
-        sConfigMgr->GetOption<std::string>("SoloCollections.Transmog.MixedWeapons", "same"));
+        sConfigMgr->GetOption<std::string>("SoloCollections.Transmog.MixedWeapons", "any"));
     AllowMixedOffhandArmorTypes = sConfigMgr->GetOption<bool>("Transmogrification.AllowMixedOffhandArmorTypes", false);
     AllowMixedWeaponHandedness = sConfigMgr->GetOption<bool>("Transmogrification.AllowMixedWeaponHandedness", false);
     AllowFishingPoles = sConfigMgr->GetOption<bool>("Transmogrification.AllowFishingPoles", false);

@@ -125,22 +125,120 @@ class AddonContractTests(unittest.TestCase):
         self.assertNotIn("Ability_Mount_RidingHorse", catalog)
         self.assertNotIn("INV_Box_PetCarrier_01", catalog)
 
-    def test_launcher_is_bottom_right_draggable_and_persistent(self):
+    def test_legacy_floating_launchers_are_not_created(self):
         path = ADDON / "UI" / "Launcher.lua"
         self.assertTrue(path.is_file(), f"missing {path}")
         text = read_text(path)
+        self.assertNotIn('"SoloCollectionsLauncher"', text)
+        self.assertNotIn('"SoloCollectionsTransmogLauncher"', text)
+        self.assertNotIn('CreateFrame("Button", name, UIParent)', text)
+        self.assertNotIn("SC.db.launcher", text)
+
+    def test_transmog_launcher_is_a_minimap_button_not_a_screen_launcher(self):
+        launcher = read_text(ADDON / "UI" / "Launcher.lua")
+        bootstrap = read_text(ADDON / "Core" / "Bootstrap.lua")
         for token in (
-            '"SoloCollectionsLauncher"',
-            'SetWidth(46)',
-            'SetHeight(46)',
-            '"BOTTOMRIGHT"',
-            'RegisterForDrag("LeftButton")',
-            'SetClampedToScreen(true)',
-            'GameTooltip:SetText("收藏")',
-            'SC:ToggleJournal()',
-            'SC.db.launcher',
+            '"SoloCollectionsTransmogMinimapButton"',
+            'CreateFrame("Button", "SoloCollectionsTransmogMinimapButton", minimap)',
+            "button.scMinimapAngle",
+            "math.atan2",
+            "SC:ToggleTransmog()",
+            "transmogMinimap",
+            "button:GetParent() == minimap",
         ):
-            self.assertIn(token, text)
+            self.assertIn(token, launcher)
+        self.assertNotIn('"SoloCollectionsTransmogLauncher"', launcher)
+        self.assertIn("schemaVersion = 13", bootstrap)
+        self.assertIn('transmogMinimap = { angle = 225 }', bootstrap)
+        self.assertIn('db.transmogLauncher = nil', bootstrap)
+
+    def test_live_dragonui_collections_bridge_is_loaded_as_an_optional_adapter(self):
+        toc = read_text(ADDON / "SoloCollections.toc")
+        bridge = read_text(ADDON / "UI" / "DragonUI" / "CollectionsBridge.lua")
+        self.assertIn("## OptionalDeps: DragonUI,", toc)
+        self.assertIn("UI\\DragonUI\\CollectionsBridge.lua", toc)
+        for token in (
+            "DragonUI.ToggleCollections",
+            "State.GetCategoryState(category) == \"Ready\"",
+            "Bridge.SetMountFavorite",
+            "Bridge.SetPetFavorite",
+            "Bridge.SummonMount",
+            "Bridge.SummonPet",
+            "Bridge.SummonRandomMount",
+            "Bridge.SummonRandomPet",
+            "Bridge.RegisterStateListener",
+            "scAccountCollection",
+        ):
+            self.assertIn(token, bridge)
+
+    def test_english_clients_use_english_catalog_and_transmog_labels(self):
+        base = read_text(ADDON / "SoloCollections.lua")
+        catalog = read_text(ADDON / "Core" / "Catalog.lua")
+        identity = read_text(ADDON / "Core" / "IdentityRegistry.lua")
+        templates = read_text(ADDON / "UI" / "Templates.lua")
+        window = read_text(ADDON / "UI" / "WardrobeLab" / "Window.lua")
+        state = read_text(ADDON / "UI" / "WardrobeLab" / "State.lua")
+
+        self.assertIn('return locale == "zhCN" or locale == "zhTW"', base)
+        self.assertIn('return (names.enUS and names.enUS ~= "" and names.enUS)', catalog)
+        self.assertIn('name = localizedName(names, collection.collectionKey)', catalog)
+        self.assertIn('label = L(name.enUS, name.zhCN)', identity)
+        self.assertIn('L("Search", "搜索")', templates)
+        self.assertIn('L("Transmogrify", "幻化")', window)
+        self.assertIn('label = L("Head", "头部")', state)
+
+    def test_native_class_mounts_remain_visible_in_dragonui(self):
+        bridge = read_text(ADDON / "UI" / "DragonUI" / "CollectionsBridge.lua")
+        catalog = read_text(ADDON / "Core" / "Catalog.lua")
+
+        self.assertIn("local catalogSpellIds = {}", bridge)
+        self.assertIn("for spellId, companion in pairs(native) do", bridge)
+        self.assertIn("scAccountCollection = false", bridge)
+        self.assertIn("Paladin's Summon Warhorse", bridge)
+        self.assertIn('collectionKey = "mount.warhorse"', read_text(ADDON / "Data" / "Generated" / "Catalog.lua"))
+        self.assertIn('journalVisible = false', read_text(ADDON / "Data" / "Generated" / "Catalog.lua"))
+        self.assertIn("journalVisible then", catalog)
+
+    def test_live_ezui_asset_pack_and_english_item_tooltips_are_accepted(self):
+        ezui = read_text(ADDON / "Core" / "EzCollectionsUI.lua")
+        catalog = read_text(ADDON / "Core" / "Catalog.lua")
+        sources = read_text(ADDON / "UI" / "WardrobeLab" / "Sources.lua")
+
+        self.assertIn('EXPECTED_SOURCE_TREE_HASH = "6ba2a6f12f47518f3e3794a13979d632fdb2348af73ce4515423cd9812002d21"', ezui)
+        self.assertIn('EXPECTED_ASSET_TREE_HASH = "2d8d816ae57f7e5e3920db2e03762cb7ebe88f684857a8492ab22b1f74029779"', ezui)
+        self.assertIn("local function appearanceDisplayName(store, index)", catalog)
+        self.assertIn("function Catalog.GetAppearanceDisplayName(record)", catalog)
+        self.assertIn("name = appearanceDisplayName(store, index)", catalog)
+        self.assertIn("Catalog.GetAppearanceDisplayName(record)", sources)
+
+    def test_transmog_runtime_preserves_live_appearance_and_has_card_fallbacks(self):
+        launcher = read_text(ADDON / "UI" / "Launcher.lua")
+        model = read_text(ADDON / "UI" / "EzWardrobe" / "Model.lua")
+        sources = read_text(ADDON / "UI" / "WardrobeLab" / "Sources.lua")
+        preview = read_text(ADDON / "UI" / "WardrobeLab" / "Preview.lua")
+
+        self.assertIn("MICRO_BUTTON_ICON_COORD = { 0.08, 0.92, 0.02, 0.48 }", launcher)
+        self.assertIn('SC.Localize("Transmogrify", "幻化")', launcher)
+        self.assertIn('SetKeepModelOnHide", true', model)
+        self.assertIn('itemIcon:SetDrawLayer("BACKGROUND", 1)', sources)
+        self.assertIn("local function presentItemIcon(record)", sources)
+        self.assertIn("presentItemIcon(record)", sources)
+        self.assertIn("local preserveCurrentAppearance = state.HasDraft and not state:HasDraft()", preview)
+        self.assertIn('signature = preserveCurrentAppearance and "CURRENT_UNIT_APPEARANCE"', preview)
+
+    def test_wardrobe_defaults_to_all_armor_and_weapon_subtypes(self):
+        bootstrap = read_text(ADDON / "Core" / "Bootstrap.lua")
+        catalog = read_text(ADDON / "Core" / "Catalog.lua")
+
+        self.assertIn("schemaVersion = 13", bootstrap)
+        self.assertIn('armorType = "ALL"', bootstrap)
+        self.assertIn('weaponType = "ALL"', bootstrap)
+        self.assertIn('AUTO = true, ALL = true', bootstrap)
+        self.assertIn("if incomingSchema < 13 then", bootstrap)
+        self.assertIn('db.filters.armorType = "ALL"', bootstrap)
+        self.assertIn('db.filters.weaponType = "ALL"', bootstrap)
+        self.assertIn('{ key = "ALL", label = L("All", "全部") }', catalog)
+        self.assertIn('if weaponType == "ALL" then', catalog)
 
     def test_journal_is_lazy_and_has_shared_shell_controls(self):
         path = ADDON / "UI" / "CollectionsFrame.lua"
@@ -187,7 +285,7 @@ class AddonContractTests(unittest.TestCase):
             r'contentHost:SetPoint\(\s*"BOTTOMRIGHT"[^\n]*,\s*72\s*\)',
         )
 
-    def test_journal_header_state_and_launcher_use_retail_helpers_and_artwork(self):
+    def test_journal_header_and_transmog_minimap_launcher_use_expected_artwork(self):
         journal = read_text(ADDON / "UI" / "CollectionsFrame.lua")
         launcher = read_text(ADDON / "UI" / "Launcher.lua")
 
@@ -201,10 +299,9 @@ class AddonContractTests(unittest.TestCase):
             "frame.scPortrait:SetTexture(UI.Media.tabs[selected] or UI.Media.launcher)",
         ):
             self.assertIn(token, journal)
-        self.assertIn("UI.Media.collectionsLauncher", launcher)
         self.assertIn("MICRO_BUTTON_ICON_COORD", launcher)
-        self.assertNotIn("Media\\Icons\\launcher.tga", launcher)
-        self.assertNotIn("Media\\Icons\\collections-micro.tga", launcher)
+        self.assertIn("transmogIconPath", launcher)
+        self.assertIn("SoloCollectionsTransmogMinimapButton", launcher)
         self.assertNotIn("UI.Media.collectedFrame", launcher)
 
     def test_retail_search_uses_three_slice_and_progress_uses_clipped_inner_bar(self):

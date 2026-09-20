@@ -1,4 +1,5 @@
 local SC = SoloCollections
+local L = SC.Localize
 
 SC.EzWardrobe = SC.EzWardrobe or {}
 SC.EzWardrobe.DataProvider = SC.EzWardrobe.DataProvider or {}
@@ -32,10 +33,10 @@ local EQUIPMENT_SLOT_BY_APPEARANCE_SLOT = {
 }
 
 DataProvider.ARMOR_OPTIONS = {
-    { key = "PLATE", label = "板甲" },
-    { key = "MAIL", label = "锁甲" },
-    { key = "LEATHER", label = "皮甲" },
-    { key = "CLOTH", label = "布甲" },
+    { key = "PLATE", label = L("Plate", "板甲") },
+    { key = "MAIL", label = L("Mail", "锁甲") },
+    { key = "LEATHER", label = L("Leather", "皮甲") },
+    { key = "CLOTH", label = L("Cloth", "布甲") },
 }
 
 local function copyTable(source)

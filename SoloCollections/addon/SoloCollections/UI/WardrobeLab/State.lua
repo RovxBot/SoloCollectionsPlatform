@@ -1,23 +1,24 @@
 local SC = SoloCollections
+local L = SC.Localize
 
 SC.WardrobeLab = SC.WardrobeLab or {}
 local Lab = SC.WardrobeLab
 
 Lab.SLOTS = {
-    { key = "HEAD", label = "头部", inventorySlot = 0 },
-    { key = "SHOULDER", label = "肩部", inventorySlot = 2 },
-    { key = "BACK", label = "背部", inventorySlot = 14 },
-    { key = "CHEST", label = "胸部", inventorySlot = 4 },
-    { key = "SHIRT", label = "衬衣", inventorySlot = 3 },
-    { key = "TABARD", label = "战袍", inventorySlot = 18 },
-    { key = "WRIST", label = "手腕", inventorySlot = 8 },
-    { key = "HANDS", label = "手部", inventorySlot = 9 },
-    { key = "WAIST", label = "腰部", inventorySlot = 5 },
-    { key = "LEGS", label = "腿部", inventorySlot = 6 },
-    { key = "FEET", label = "脚部", inventorySlot = 7 },
-    { key = "MAINHAND", label = "主手", inventorySlot = 15 },
-    { key = "OFFHAND", label = "副手", inventorySlot = 16 },
-    { key = "RANGED", label = "远程", inventorySlot = 17 },
+    { key = "HEAD", label = L("Head", "头部"), inventorySlot = 0 },
+    { key = "SHOULDER", label = L("Shoulder", "肩部"), inventorySlot = 2 },
+    { key = "BACK", label = L("Back", "背部"), inventorySlot = 14 },
+    { key = "CHEST", label = L("Chest", "胸部"), inventorySlot = 4 },
+    { key = "SHIRT", label = L("Shirt", "衬衣"), inventorySlot = 3 },
+    { key = "TABARD", label = L("Tabard", "战袍"), inventorySlot = 18 },
+    { key = "WRIST", label = L("Wrist", "手腕"), inventorySlot = 8 },
+    { key = "HANDS", label = L("Hands", "手部"), inventorySlot = 9 },
+    { key = "WAIST", label = L("Waist", "腰部"), inventorySlot = 5 },
+    { key = "LEGS", label = L("Legs", "腿部"), inventorySlot = 6 },
+    { key = "FEET", label = L("Feet", "脚部"), inventorySlot = 7 },
+    { key = "MAINHAND", label = L("Main Hand", "主手"), inventorySlot = 15 },
+    { key = "OFFHAND", label = L("Off Hand", "副手"), inventorySlot = 16 },
+    { key = "RANGED", label = L("Ranged", "远程"), inventorySlot = 17 },
 }
 
 Lab.SLOT_BY_KEY = {}
@@ -26,7 +27,7 @@ for _, definition in ipairs(Lab.SLOTS) do Lab.SLOT_BY_KEY[definition.key] = defi
 -- Legion TRANSMOGRIFY_INVALID_NO_ITEM. 3.3.5 GetInventoryItemLink is often
 -- nil until the item is cached; a real item still has count > 0 or an icon
 -- that is not the paperdoll empty-slot art. Item id 0 / "" is empty.
-Lab.EMPTY_SLOT_TEXT = "该装备栏里没有装备物品。"
+Lab.EMPTY_SLOT_TEXT = L("There is no item equipped in this slot.", "该装备栏里没有装备物品。")
 
 function Lab.PositiveItemId(value)
     value = tonumber(value)
@@ -92,25 +93,25 @@ end
 
 -- Legion apply-block copy. Slot tooltip uses the same strings.
 Lab.APPLY_REASON_TEXT = {
-    NO_DRAFT = "先在右侧选择外观，建立待定幻化。",
-    NOT_OWNED = "你尚未收集此外观。",
+    NO_DRAFT = L("Select an appearance on the right to create a pending transmogrification.", "先在右侧选择外观，建立待定幻化。"),
+    NOT_OWNED = L("You have not collected this appearance.", "你尚未收集此外观。"),
     INVALID_TARGET_SLOT = Lab.EMPTY_SLOT_TEXT,
     NOTHING_EQUIPPED = Lab.EMPTY_SLOT_TEXT,
-    HIDE_VISUAL_UNSUPPORTED = "隐藏外观只能本地预览，当前不能应用到装备。",
-    CLASS_RESTRICTED = "当前装备与此外观不兼容。",
-    RACE_RESTRICTED = "当前种族不能使用此外观。",
-    SKILL_REQUIRED = "当前角色缺少使用此外观所需的技能。",
-    WEAPON_TYPE = "武器类型不兼容。",
-    ARMOR_TYPE = "护甲类型不兼容。",
-    UNKNOWN_IDENTITY = "未知外观。",
-    COST_CHANGED = "费用已变化，请重新确认后再应用。",
-    INSUFFICIENT_FUNDS = "金币不足。",
-    UNSUPPORTED = "当前版本不支持这项幻化。",
-    INVALID_REQUEST = "请求无效。",
-    REQUEST_NOT_SENT = "请求未能发出。",
-    REQUEST_PENDING = "已有应用请求正在处理。",
-    BRIDGE_UNAVAILABLE = "幻化服务尚未就绪，请稍后再试。",
-    NO_PRESET = "先选择一套套装预设。",
+    HIDE_VISUAL_UNSUPPORTED = L("Hidden appearances are preview-only and cannot be applied.", "隐藏外观只能本地预览，当前不能应用到装备。"),
+    CLASS_RESTRICTED = L("Your equipped item is incompatible with this appearance.", "当前装备与此外观不兼容。"),
+    RACE_RESTRICTED = L("Your race cannot use this appearance.", "当前种族不能使用此外观。"),
+    SKILL_REQUIRED = L("Your character lacks the skill required for this appearance.", "当前角色缺少使用此外观所需的技能。"),
+    WEAPON_TYPE = L("Weapon type is incompatible.", "武器类型不兼容。"),
+    ARMOR_TYPE = L("Armor type is incompatible.", "护甲类型不兼容。"),
+    UNKNOWN_IDENTITY = L("Unknown appearance.", "未知外观。"),
+    COST_CHANGED = L("The cost changed. Confirm again before applying.", "费用已变化，请重新确认后再应用。"),
+    INSUFFICIENT_FUNDS = L("Not enough gold.", "金币不足。"),
+    UNSUPPORTED = L("This transmogrification is not supported by this client.", "当前版本不支持这项幻化。"),
+    INVALID_REQUEST = L("Invalid request.", "请求无效。"),
+    REQUEST_NOT_SENT = L("The request could not be sent.", "请求未能发出。"),
+    REQUEST_PENDING = L("An apply request is already being processed.", "已有应用请求正在处理。"),
+    BRIDGE_UNAVAILABLE = L("The transmogrification service is not ready. Try again shortly.", "幻化服务尚未就绪，请稍后再试。"),
+    NO_PRESET = L("Select an outfit preset first.", "先选择一套套装预设。"),
 }
 
 function Lab.ApplyReasonText(reason, extra)
@@ -119,17 +120,17 @@ function Lab.ApplyReasonText(reason, extra)
     if reason == "NOT_OWNED" and extra.set then
         -- Short enough for the single-line state text under the preview.
         text = string.format(
-            "套装已收集 %s/%s，未收藏只能预览",
+            L("Set collection progress: %s/%s. Uncollected pieces are preview-only.", "套装已收集 %s/%s，未收藏只能预览"),
             tostring(extra.owned or 0),
             tostring(extra.required or 0)
         )
     elseif reason and Lab.APPLY_REASON_TEXT[reason] then
         text = Lab.APPLY_REASON_TEXT[reason]
     else
-        text = extra.fallback or "当前待定外观暂不能提交应用。"
+        text = extra.fallback or L("The pending appearance cannot be applied yet.", "当前待定外观暂不能提交应用。")
     end
     if extra.slotLabel and extra.slotLabel ~= "" then
-        return extra.slotLabel .. "：" .. text
+        return extra.slotLabel .. L(": ", "：") .. text
     end
     return text
 end
@@ -206,7 +207,7 @@ function Lab.ShowDialog(kind, text, onAccept)
     if dialog then return dialog end
     -- 3.3.5 can refuse a custom popup; never leave a confirm silent.
     if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffffd100幻化：|r" .. text)
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffd100" .. L("Transmogrify", "幻化") .. ":|r" .. text)
     end
     if UIErrorsFrame and UIErrorsFrame.AddMessage then
         UIErrorsFrame:AddMessage(text, 1, 0.82, 0.18, 1, 6)
@@ -224,8 +225,8 @@ function Lab.ConfirmRestoreOriginal(state, slotKey)
         return false
     end
     local definition = Lab.SLOT_BY_KEY and Lab.SLOT_BY_KEY[slotKey]
-    local slotName = (definition and definition.label) or "该部位"
-    return Lab.Confirm("恢复" .. slotName .. "的原装备外观？已经应用到这件装备上的幻化会被清除。", function()
+    local slotName = (definition and definition.label) or L("this slot", "该部位")
+    return Lab.Confirm(L("Restore the original appearance of " .. slotName .. "? Any transmogrification applied to this item will be cleared.", "恢复" .. slotName .. "的原装备外观？已经应用到这件装备上的幻化会被清除。"), function()
         if state.IsSlotDirty and state:IsSlotDirty(slotKey) then
             state:ClearDraft(slotKey)
         end
@@ -333,7 +334,7 @@ function Lab.CreateHideVisualRecord(slotKey)
         isHideVisual = true,
         collected = true,
         favorite = false,
-        name = "隐藏外观",
+        name = L("Hidden appearance", "隐藏外观"),
         slot = slotKey,
         itemId = nil,
         itemIds = {},
@@ -395,18 +396,18 @@ end
 function Lab.AppearanceDisplayName(collectionId, itemId)
     collectionId = tonumber(collectionId)
     if collectionId == 2 then
-        return "隐藏", true
+        return L("Hidden", "隐藏"), true
     end
     local record = Lab.FindAppearanceRecord(collectionId, itemId)
     if record then
-        return record.name or ("外观 " .. tostring(collectionId)), false
+        return record.name or (L("Appearance ", "外观 ") .. tostring(collectionId)), false
     end
     if itemId and GetItemInfo then
         local name = GetItemInfo(itemId)
         if name then return name, false end
     end
     if collectionId then
-        return "外观 " .. tostring(collectionId), false
+        return L("Appearance ", "外观 ") .. tostring(collectionId), false
     end
     return nil, false
 end
@@ -417,13 +418,13 @@ function Lab.AppendTransmogLines(tooltip, appearanceName, pending, hidden)
     if not tooltip or type(tooltip.AddLine) ~= "function" then return end
     local pinkR, pinkG, pinkB = 1, 0.5, 1
     if hidden then
-        appearanceName = "隐藏"
+        appearanceName = L("Hidden", "隐藏")
     end
     if not appearanceName then return end
     if pending then
-        tooltip:AddLine("你将要幻化为:", pinkR, pinkG, pinkB)
+        tooltip:AddLine(L("Pending appearance:", "你将要幻化为:"), pinkR, pinkG, pinkB)
     else
-        tooltip:AddLine("幻化为:", pinkR, pinkG, pinkB)
+        tooltip:AddLine(L("Transmogrified to:", "幻化为:"), pinkR, pinkG, pinkB)
     end
     tooltip:AddLine(appearanceName, pinkR, pinkG, pinkB)
 end
@@ -449,7 +450,7 @@ function Lab.GetEquippedAppearanceRecord(slotKey, equippedId)
         id = "EQUIPPED:" .. tostring(equippedId),
         itemId = equippedId,
         itemIds = { equippedId },
-        name = name or ("当前装备 " .. tostring(equippedId)),
+        name = name or (L("Current equipment ", "当前装备 ") .. tostring(equippedId)),
         collected = true,
         favorite = false,
         slot = slotKey,
@@ -765,9 +766,9 @@ function State:GetApplyWarnings()
     end
     if hideDraft then
         if Lab.IsAppliedReady() then
-            warnings[#warnings + 1] = "包含隐藏外观，将写入当前角色。"
+            warnings[#warnings + 1] = L("This includes a hidden appearance and will be applied to the current character.", "包含隐藏外观，将写入当前角色。")
         else
-            warnings[#warnings + 1] = "隐藏外观只会留在本地预览，不会写入装备。"
+            warnings[#warnings + 1] = L("Hidden appearances remain local previews and will not be written to equipment.", "隐藏外观只会留在本地预览，不会写入装备。")
         end
     end
     return warnings
@@ -858,7 +859,7 @@ function Lab.ConfirmApply(state, summary, onAccept)
     if state and state.GetApplyCost then
         copper = state:GetApplyCost()
     end
-    local text = tostring(summary or "确定应用当前待定幻化？")
+    local text = tostring(summary or L("Apply the current pending transmogrification?", "确定应用当前待定幻化？"))
     Lab.pendingPopupAccept = onAccept
     local dialog
     if StaticPopup_Show then
@@ -871,14 +872,14 @@ end
 function Lab.BeginApplyWithWarnings(state)
     if not state then return false end
     if state.requestState and state.requestState.status == "REQUESTING" then
-        Lab.Notice("已有应用请求正在处理。")
+        Lab.Notice(L("An apply request is already being processed.", "已有应用请求正在处理。"))
         return false
     end
     if state.presetRecord then
         local canApply, reason, owned, required = state:GetSetApplyState()
         if canApply then
             local name = tostring(state.presetRecord.name or state.presetRecord.id)
-            return Lab.ConfirmApply(state, "确定应用套装「" .. name .. "」？", function()
+            return Lab.ConfirmApply(state, L("Apply outfit set \"" .. name .. "\"?", "确定应用套装「" .. name .. "」？"), function()
                 state:BeginApplyAll()
             end)
         end
@@ -895,7 +896,7 @@ function Lab.BeginApplyWithWarnings(state)
         return false
     end
     local slots = state:GetPendingApplySlots()
-    local summary = string.format("确定将 %d 个部位的幻化写入装备？", #slots)
+    local summary = string.format(L("Apply transmogrification to %d equipment slot(s)?", "确定将 %d 个部位的幻化写入装备？"), #slots)
     local warnings = state:GetApplyWarnings()
     if warnings[1] then
         summary = warnings[1] .. summary
@@ -1240,7 +1241,7 @@ function State:BeginApplyAll()
                 self:RequestQuote()
             end
             if status == "INSUFFICIENT_FUNDS" then
-                Lab.Notice("金币不足，外观没有写入。费用见左侧金额。")
+                Lab.Notice(L("Not enough gold. The appearance was not applied; see the cost on the left.", "金币不足，外观没有写入。费用见左侧金额。"))
             end
             self.requestState.status, self.requestState.reason = "FAILED", status or "UNKNOWN"
             self:Notify("REQUEST_RESULT")
@@ -1292,7 +1293,7 @@ function State:BeginApplySet()
                     self:RequestQuote()
                 end
                 if status == "INSUFFICIENT_FUNDS" then
-                    Lab.Notice("金币不足，外观没有写入。费用见左侧金额。")
+                    Lab.Notice(L("Not enough gold. The appearance was not applied; see the cost on the left.", "金币不足，外观没有写入。费用见左侧金额。"))
                 end
                 self.requestState.status, self.requestState.reason = "FAILED", status or "UNKNOWN"
                 self:Notify("REQUEST_RESULT")
@@ -1341,7 +1342,7 @@ function State:BeginApplySet()
             self:Notify("AUTHORITATIVE_REFRESH")
         else
             if reason == "INSUFFICIENT_FUNDS" then
-                Lab.Notice("金币不足，外观没有写入。费用见左侧金额。")
+                Lab.Notice(L("Not enough gold. The appearance was not applied; see the cost on the left.", "金币不足，外观没有写入。费用见左侧金额。"))
             end
             self.requestState.status, self.requestState.reason = "FAILED", reason or "UNKNOWN"
             self:Notify("REQUEST_RESULT")

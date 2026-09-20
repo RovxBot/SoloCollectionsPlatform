@@ -1,6 +1,7 @@
 local SC = SoloCollections
 local Lab = SC.WardrobeLab
 if not Lab then return end
+local L = SC.Localize
 
 local DEFAULT_ROTATION = 0.61
 local TWO_PI = math.pi * 2
@@ -199,7 +200,7 @@ function Lab.CreatePreview(parent, state)
     model.scZoom = 0
     if model.SetAlpha then pcall(model.SetAlpha, model, 0) end
     local unavailable = model:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-    unavailable:SetPoint("CENTER"); unavailable:SetText("模型预览不可用"); unavailable:Hide()
+    unavailable:SetPoint("CENTER"); unavailable:SetText(L("Model preview unavailable", "模型预览不可用")); unavailable:Hide()
 
     function model:ResetCamera()
         self.scDragging = nil
@@ -245,23 +246,29 @@ function Lab.CreatePreview(parent, state)
     end)
     reset:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("重置镜头", 1, 0.82, 0.18)
-        GameTooltip:AddLine("恢复默认朝向和距离。换装后仍会记住你刚才的拖转和缩放。", 0.72, 0.72, 0.72, true)
+        GameTooltip:SetText(L("Reset Camera", "重置镜头"), 1, 0.82, 0.18)
+        GameTooltip:AddLine(L("Restore the default rotation and distance. Your drag rotation and zoom are retained after changing gear.", "恢复默认朝向和距离。换装后仍会记住你刚才的拖转和缩放。"), 0.72, 0.72, 0.72, true)
         GameTooltip:Show()
     end)
     reset:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     function model:RefreshDraft()
+        -- With no local draft, SetUnit already contains the server-applied
+        -- FakeEntry appearance.  Re-trying the source equipment here would
+        -- replace that live appearance with its untransmogrified base items.
+        local preserveCurrentAppearance = state.HasDraft and not state:HasDraft()
         local items = {}
-        for _, itemId in ipairs(state:GetPreviewItemIds()) do
-            items[#items + 1] = "item:" .. tostring(itemId)
+        if not preserveCurrentAppearance then
+            for _, itemId in ipairs(state:GetPreviewItemIds()) do
+                items[#items + 1] = "item:" .. tostring(itemId)
+            end
         end
-        local hidden = state.GetHiddenSlots and state:GetHiddenSlots() or {}
+        local hidden = not preserveCurrentAppearance and state.GetHiddenSlots and state:GetHiddenSlots() or {}
         local selected = state.selectedSlot
-        local hideRanged = selected == "MAINHAND" or selected == "OFFHAND"
-        local hideMelee = selected == "RANGED"
-        local needUndress = next(hidden) ~= nil or hideRanged or hideMelee
-        local signature = table.concat(items, ",")
+        local hideRanged = not preserveCurrentAppearance and (selected == "MAINHAND" or selected == "OFFHAND")
+        local hideMelee = not preserveCurrentAppearance and selected == "RANGED"
+        local needUndress = not preserveCurrentAppearance and (next(hidden) ~= nil or hideRanged or hideMelee)
+        local signature = preserveCurrentAppearance and "CURRENT_UNIT_APPEARANCE" or table.concat(items, ",")
         if needUndress then signature = signature .. "|H" end
         if hideRanged then signature = signature .. "|NR" end
         if hideMelee then signature = signature .. "|NM" end

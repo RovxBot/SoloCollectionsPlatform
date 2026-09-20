@@ -6,8 +6,11 @@ SC.EzCollectionsUI = EzUI
 EzUI.API_VERSION = 1
 EzUI.ASSET_GLOBAL = "SoloCollectionsEzUIAssets"
 EzUI.EXPECTED_SOURCE_VERSION = "2.2"
-EzUI.EXPECTED_SOURCE_TREE_HASH = "218c65a59b42d810935963013cdf6b729cd7d1d69dc67a52a70632b89911c7f6"
-EzUI.EXPECTED_ASSET_TREE_HASH = "4673b2c8631c5f28050b9eecde7dad4a6bb33dc6a2ed5f0630a64a17945dbf53"
+-- This is the verified 2.2 asset pack installed with the local ChromieCraft
+-- client.  Keep the source and media hashes pinned so a partial or unrelated
+-- pack cannot silently supply the wardrobe artwork.
+EzUI.EXPECTED_SOURCE_TREE_HASH = "6ba2a6f12f47518f3e3794a13979d632fdb2348af73ce4515423cd9812002d21"
+EzUI.EXPECTED_ASSET_TREE_HASH = "2d8d816ae57f7e5e3920db2e03762cb7ebe88f684857a8492ab22b1f74029779"
 EzUI.EXPECTED_ROOT = "Interface\\AddOns\\SoloCollections_EzUI"
 
 EzUI.MEDIA = {

@@ -1,4 +1,5 @@
 local SC = SoloCollections
+local L = SC.Localize
 
 SC.Catalog = SC.Catalog or {}
 
@@ -17,9 +18,9 @@ local DEFAULT_FILTERS = {
     uncollected = true,
     favorites = false,
     classToken = "ALL",
-    armorType = "AUTO",
+    armorType = "ALL",
     slot = "HEAD",
-    weaponType = "AUTO",
+    weaponType = "ALL",
     mounts = {
         unusable = true,
         ground = true,
@@ -45,10 +46,10 @@ local APPEARANCE_SOURCE_KIND_ALIASES = {
 }
 
 Catalog.APPEARANCE_SOURCE_KINDS = {
-    { key = "drop", label = "掉落" },
-    { key = "quest", label = "任务" },
-    { key = "vendor", label = "商人" },
-    { key = "crafted", label = "专业" },
+    { key = "drop", label = L("Drop", "掉落") },
+    { key = "quest", label = L("Quest", "任务") },
+    { key = "vendor", label = L("Vendor", "商人") },
+    { key = "crafted", label = L("Profession", "专业") },
 }
 
 function Catalog.NormalizeAppearanceSourceKind(kind)
@@ -68,24 +69,24 @@ local RANGED_WEAPON_TYPES = {
 }
 
 Catalog.WEAPON_FILTERS = {
-    { key = "ONE_HAND_AXE", label = "单手斧", main = true, off = true },
-    { key = "TWO_HAND_AXE", label = "双手斧", main = true },
-    { key = "BOW", label = "弓", main = true },
-    { key = "GUN", label = "枪械", main = true },
-    { key = "ONE_HAND_MACE", label = "单手锤", main = true, off = true },
-    { key = "TWO_HAND_MACE", label = "双手锤", main = true },
-    { key = "POLEARM", label = "长柄武器", main = true },
-    { key = "ONE_HAND_SWORD", label = "单手剑", main = true, off = true },
-    { key = "TWO_HAND_SWORD", label = "双手剑", main = true },
-    { key = "STAFF", label = "法杖", main = true },
-    { key = "FIST_WEAPON", label = "拳套", main = true, off = true },
-    { key = "DAGGER", label = "匕首", main = true, off = true },
-    { key = "THROWN", label = "投掷武器", main = true },
-    { key = "CROSSBOW", label = "弩", main = true },
-    { key = "WAND", label = "魔杖", main = true },
-    { key = "FISHING_POLE", label = "钓鱼竿", main = true },
-    { key = "SHIELD", label = "盾牌", off = true },
-    { key = "OFFHAND_ITEM", label = "副手物品", off = true },
+    { key = "ONE_HAND_AXE", label = L("One-Hand Axe", "单手斧"), main = true, off = true },
+    { key = "TWO_HAND_AXE", label = L("Two-Hand Axe", "双手斧"), main = true },
+    { key = "BOW", label = L("Bow", "弓"), main = true },
+    { key = "GUN", label = L("Gun", "枪械"), main = true },
+    { key = "ONE_HAND_MACE", label = L("One-Hand Mace", "单手锤"), main = true, off = true },
+    { key = "TWO_HAND_MACE", label = L("Two-Hand Mace", "双手锤"), main = true },
+    { key = "POLEARM", label = L("Polearm", "长柄武器"), main = true },
+    { key = "ONE_HAND_SWORD", label = L("One-Hand Sword", "单手剑"), main = true, off = true },
+    { key = "TWO_HAND_SWORD", label = L("Two-Hand Sword", "双手剑"), main = true },
+    { key = "STAFF", label = L("Staff", "法杖"), main = true },
+    { key = "FIST_WEAPON", label = L("Fist Weapon", "拳套"), main = true, off = true },
+    { key = "DAGGER", label = L("Dagger", "匕首"), main = true, off = true },
+    { key = "THROWN", label = L("Thrown", "投掷武器"), main = true },
+    { key = "CROSSBOW", label = L("Crossbow", "弩"), main = true },
+    { key = "WAND", label = L("Wand", "魔杖"), main = true },
+    { key = "FISHING_POLE", label = L("Fishing Pole", "钓鱼竿"), main = true },
+    { key = "SHIELD", label = L("Shield", "盾牌"), off = true },
+    { key = "OFFHAND_ITEM", label = L("Off-hand", "副手物品"), off = true },
 }
 
 function Catalog.IsWeaponFilterSlot(slot)
@@ -226,6 +227,11 @@ function Catalog.GetAvailableWeaponFilters(slot)
             end
         end
     end
+    -- The wardrobe server validates the equipped item's actual handedness.
+    -- Presenting every compatible-slot subtype here lets a player choose (for
+    -- example) a staff appearance for a two-hand sword instead of silently
+    -- inheriting a class-specific subtype filter.
+    table.insert(result, 1, { key = "ALL", label = L("All", "全部") })
     return result
 end
 
@@ -244,7 +250,10 @@ function Catalog.EnsureWeaponTypeForSlot(filters, slot)
 end
 
 function Catalog.WeaponFilterLabel(weaponType)
-    if not weaponType or weaponType == "AUTO" or weaponType == "ALL" then
+    if weaponType == "ALL" then
+        return L("All", "全部")
+    end
+    if not weaponType or weaponType == "AUTO" then
         return nil
     end
     for _, option in ipairs(Catalog.WEAPON_FILTERS) do
@@ -264,18 +273,18 @@ local mountDescriptionGapKeys = {}
 local getGeneratedMountSource
 
 local MOUNT_SOURCE_LABELS = {
-    [0] = "掉落",
-    [1] = "任务",
-    [2] = "商人",
-    [3] = "专业",
-    [4] = "宠物对战",
-    [5] = "成就",
-    [6] = "世界事件",
-    [7] = "促销",
-    [8] = "集换式卡牌",
-    [9] = "游戏商城",
-    [10] = "发现",
-    [11] = "其他",
+    [0] = L("Drop", "掉落"),
+    [1] = L("Quest", "任务"),
+    [2] = L("Vendor", "商人"),
+    [3] = L("Profession", "专业"),
+    [4] = L("Pet Battle", "宠物对战"),
+    [5] = L("Achievement", "成就"),
+    [6] = L("World Event", "世界事件"),
+    [7] = L("Promotion", "促销"),
+    [8] = L("Trading Card Game", "集换式卡牌"),
+    [9] = L("In-Game Store", "游戏商城"),
+    [10] = L("Discovery", "发现"),
+    [11] = L("Other", "其他"),
 }
 
 Catalog.MOUNT_SOURCE_ORDER = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }
@@ -317,7 +326,17 @@ end
 
 function Catalog.MountSourceLabel(sourceType)
     sourceType = tonumber(sourceType)
-    return MOUNT_SOURCE_LABELS[sourceType] or "其他"
+    return MOUNT_SOURCE_LABELS[sourceType] or L("Other", "其他")
+end
+
+local function localizedName(names, fallback)
+    names = names or {}
+    if SC.IsChineseLocale and SC.IsChineseLocale() then
+        return (names.zhCN and names.zhCN ~= "" and names.zhCN)
+            or (names.enUS and names.enUS ~= "") or fallback
+    end
+    return (names.enUS and names.enUS ~= "" and names.enUS)
+        or (names.zhCN and names.zhCN ~= "") or fallback
 end
 
 local function ensureWardrobeCatalog()
@@ -345,7 +364,7 @@ function getGeneratedMountSource()
             table.insert(generatedMountSource, {
                 id = collection.collectionId,
                 previewCreatureEntry = collection.previewCreatureEntry or collection.displayCreatureId,
-                name = names.zhCN ~= "" and names.zhCN or names.enUS or collection.collectionKey,
+                name = localizedName(names, collection.collectionKey),
                 icon = collection.iconTexture,
                 presentationStatus = collection.presentationStatus,
                 spellId = collection.spellId,
@@ -390,7 +409,7 @@ local function getGeneratedCompanionSource()
                 spellId = collection.spellId,
                 canonicalActionSpellId = collection.canonicalActionSpellId,
                 previewCreatureEntry = collection.previewCreatureEntry or collection.displayCreatureId,
-                name = names.zhCN ~= "" and names.zhCN or names.enUS or collection.collectionKey,
+                name = localizedName(names, collection.collectionKey),
                 icon = collection.iconTexture,
                 presentationStatus = collection.presentationStatus,
                 sourceType = collection.sourceType,
@@ -414,7 +433,7 @@ end
 
 function Catalog.PetSourceLabel(sourceType)
     sourceType = tonumber(sourceType)
-    return MOUNT_SOURCE_LABELS[sourceType] or "其他"
+    return MOUNT_SOURCE_LABELS[sourceType] or L("Other", "其他")
 end
 
 local function getGeneratedToySource()
@@ -431,7 +450,7 @@ local function getGeneratedToySource()
                 itemId = collection.displayItemId,
                 targetPolicy = collection.targetPolicy or (collection.requiresTarget and "REQUIRED_UNIT" or "SELF"),
                 requiresTarget = collection.requiresTarget and true or false,
-                name = names.zhCN ~= "" and names.zhCN or names.enUS or collection.collectionKey,
+                name = localizedName(names, collection.collectionKey),
                 icon = "Interface\\Icons\\INV_Misc_Toy_10",
                 source = "账号收藏",
                 description = "由 SoloCollections 服务端权威动作目录提供。",
@@ -616,6 +635,46 @@ local function appearanceItemIdList(store, index)
     return { store.itemIds[index] }
 end
 
+-- WardrobeCatalog is generated from Chinese source data.  The item cache is
+-- locale-aware, so use it for the visible title on non-Chinese clients while
+-- retaining the generated string as a cache-miss fallback.
+local function appearanceDisplayName(store, index)
+    local fallback = store.names[index]
+    if SC.IsChineseLocale and SC.IsChineseLocale() then
+        return fallback
+    end
+    if type(GetItemInfo) ~= "function" then
+        return fallback
+    end
+    local name = GetItemInfo(store.itemIds[index])
+    if type(name) == "string" and name ~= "" then
+        return name
+    end
+    for _, itemId in ipairs(store.extraItemIds[index] or {}) do
+        name = GetItemInfo(itemId)
+        if type(name) == "string" and name ~= "" then
+            return name
+        end
+    end
+    return fallback
+end
+
+function Catalog.GetAppearanceDisplayName(record)
+    if type(record) ~= "table" then return nil end
+    if SC.IsChineseLocale and SC.IsChineseLocale() then
+        return record.name
+    end
+    if type(GetItemInfo) == "function" then
+        for _, itemId in ipairs(record.itemIds or { record.itemId }) do
+            local name = GetItemInfo(itemId)
+            if type(name) == "string" and name ~= "" then
+                return name
+            end
+        end
+    end
+    return record.name
+end
+
 local function materializeAppearance(store, index)
     local record = {
         id = store.ids[index],
@@ -624,14 +683,16 @@ local function materializeAppearance(store, index)
         itemIds = appearanceItemIdList(store, index),
         slot = appearanceSlotName(store, index),
         armorType = appearanceArmorType(store, index),
-        name = store.names[index],
+        name = appearanceDisplayName(store, index),
         icon = nil,
         description = APPEARANCE_DESCRIPTION,
         collected = false,
         favorite = false,
     }
     local sourceText, sourceKind = appearanceSourceInfo(store, index)
-    record.source = sourceText or "获取方式未记录"
+    -- The source snapshot has Chinese-only proper names.  The normalized type
+    -- remains localized below; suppress an unreadable detail line elsewhere.
+    record.source = (SC.IsChineseLocale and SC.IsChineseLocale()) and (sourceText or "获取方式未记录") or nil
     record.sourceKind = sourceKind
     local weaponIndex = store.weaponRefs[index]
     if weaponIndex then

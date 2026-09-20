@@ -1,5 +1,6 @@
 local SC = SoloCollections
 local UI = SC.UI
+local L = SC.Localize
 
 SC.WardrobeLab = SC.WardrobeLab or {}
 local Lab = SC.WardrobeLab
@@ -9,17 +10,17 @@ function Lab.IsEnabled()
 end
 
 local STATUS_TEXT = {
-    IDLE = "选择外观试穿，点应用写入装备",
-    LOCAL_DRAFT = "待定幻化 · 尚未应用到装备",
-    LOCAL_PRESET = "套装预设 · 尚未应用到装备",
-    CONFIRM_CLEAR = "再点一次撤销按钮以清除全部待定",
-    CONFIRM_SWITCH_EQUIPPED = "切换到当前装备会清除待定 · 再选一次确认",
-    REQUESTING = "正在请求应用…",
-    CONFIRMED = "已应用到装备",
-    FAILED = "应用失败",
-    OUTFIT_SAVED = "方案已保存",
-    OUTFIT_LOADED = "已载入方案 · 点应用写入装备",
-    OUTFIT_DELETED = "方案已删除",
+    IDLE = L("Select an appearance to preview, then Apply it to your equipment.", "选择外观试穿，点应用写入装备"),
+    LOCAL_DRAFT = L("Pending transmogrification · Not applied to equipment", "待定幻化 · 尚未应用到装备"),
+    LOCAL_PRESET = L("Outfit preset · Not applied to equipment", "套装预设 · 尚未应用到装备"),
+    CONFIRM_CLEAR = L("Click Undo again to clear all pending changes", "再点一次撤销按钮以清除全部待定"),
+    CONFIRM_SWITCH_EQUIPPED = L("Switching to current equipment clears pending changes · Select again to confirm", "切换到当前装备会清除待定 · 再选一次确认"),
+    REQUESTING = L("Applying…", "正在请求应用…"),
+    CONFIRMED = L("Applied to equipment", "已应用到装备"),
+    FAILED = L("Application failed", "应用失败"),
+    OUTFIT_SAVED = L("Outfit saved", "方案已保存"),
+    OUTFIT_LOADED = L("Outfit loaded · Click Apply to write it to equipment", "已载入方案 · 点应用写入装备"),
+    OUTFIT_DELETED = L("Outfit deleted", "方案已删除"),
 }
 
 local STATUS_REASON_TEXT = {
@@ -59,16 +60,16 @@ function Lab.CreatePage(parent)
         local textIsBlockReason = false
         if request.status == "REQUESTING" then
             if request.kind == "CLEAR" then
-                text = "正在恢复原装备外观…"
+                text = L("Restoring original equipment appearance…", "正在恢复原装备外观…")
             elseif request.kind == "SET" then
-                text = "正在应用套装…"
+                text = L("Applying outfit set…", "正在应用套装…")
             elseif request.queueTotal and request.queueTotal > 1 then
-                text = string.format("正在应用 %d/%d 个部位…", request.queueIndex or 1, request.queueTotal)
+                text = string.format(L("Applying slot %d/%d…", "正在应用 %d/%d 个部位…"), request.queueIndex or 1, request.queueTotal)
             else
-                text = "正在应用所选部位…"
+                text = L("Applying selected slot…", "正在应用所选部位…")
             end
         elseif request.status == "CONFIRMED" and request.kind == "CLEAR" then
-            text = "已恢复原装备外观"
+            text = L("Original equipment appearance restored", "已恢复原装备外观")
         elseif request.status == "LOCAL_DRAFT" or request.status == "LOCAL_PRESET" then
             local canApply, reason, owned, required
             if state.presetRecord and state.GetSetApplyState then
@@ -84,12 +85,12 @@ function Lab.CreatePage(parent)
                 }) or (STATUS_REASON_TEXT[reason] or text)
                 textIsBlockReason = true
             elseif pendingCount > 0 then
-                text = string.format("待定 %d 个部位 · 点应用写入装备", pendingCount)
+                text = string.format(L("%d pending slot(s) · Click Apply to write to equipment", "待定 %d 个部位 · 点应用写入装备"), pendingCount)
             end
         elseif request.status == "FAILED" and request.reason then
             local reasonText = Lab.ApplyReasonText and Lab.ApplyReasonText(request.reason)
                 or STATUS_REASON_TEXT[request.reason] or tostring(request.reason)
-            text = text .. "：" .. reasonText
+            text = text .. L(": ", "：") .. reasonText
             textIsBlockReason = true
         end
         self.scStateText:SetText(text)

@@ -2,6 +2,7 @@ local SC = SoloCollections
 local UI = SC.UI
 local Lab = SC.WardrobeLab
 if not Lab then return end
+local L = SC.Localize
 
 local ITEM_COLUMNS = 6
 local ITEM_PAGE_SIZE = 18
@@ -91,10 +92,10 @@ local function setProgress(category, filters)
 end
 
 local SOURCE_KIND_LABELS = {
-    drop = "掉落",
-    quest = "任务",
-    vendor = "商人",
-    crafted = "专业",
+    drop = L("Drop", "掉落"),
+    quest = L("Quest", "任务"),
+    vendor = L("Vendor", "商人"),
+    crafted = L("Profession", "专业"),
 }
 
 local function appearanceSourceKindLabel(record)
@@ -113,7 +114,7 @@ end
 local function addAppearanceSourceTooltip(record)
     local kindLabel = appearanceSourceKindLabel(record)
     if kindLabel then
-        GameTooltip:AddLine("来源类型：" .. kindLabel, 0.82, 0.78, 0.70)
+        GameTooltip:AddLine(L("Source type: ", "来源类型：") .. kindLabel, 0.82, 0.78, 0.70)
     end
     local text = record.source
     if type(text) == "string" and text ~= "" and text ~= "获取方式未记录" then
@@ -387,10 +388,10 @@ function Lab.CreateSources(parent, state)
     setsView:EnableMouseWheel(true)
     setsView:Hide()
 
-    local itemTab = UI.CreateTopSubTab(host, "物品", function() host:SetMode("ITEMS") end)
+    local itemTab = UI.CreateTopSubTab(host, L("Items", "物品"), function() host:SetMode("ITEMS") end)
     itemTab:SetPoint("TOPLEFT", host, "TOPLEFT", 8, -28)
     itemTab:SetFrameLevel(host:GetFrameLevel() + 20)
-    local setTab = UI.CreateTopSubTab(host, "套装", function() host:SetMode("SETS") end)
+    local setTab = UI.CreateTopSubTab(host, L("Sets", "套装"), function() host:SetMode("SETS") end)
     setTab:SetPoint("LEFT", itemTab, "RIGHT", 0, 0)
     setTab:SetFrameLevel(host:GetFrameLevel() + 20)
 
@@ -447,6 +448,9 @@ function Lab.CreateSources(parent, state)
         itemIcon:SetWidth(48)
         itemIcon:SetHeight(48)
         itemIcon:SetPoint("CENTER", card, "CENTER", 0, 8)
+        -- Stay behind a successful DressUpModel, but provide an immediately
+        -- recognizable fallback if build 12340 discards a recycled actor.
+        itemIcon:SetDrawLayer("BACKGROUND", 1)
         itemIcon:Hide()
 
         local unavailable = CreateFrame("Frame", nil, card)
@@ -460,7 +464,7 @@ function Lab.CreateSources(parent, state)
         unavailableText:SetPoint("TOPLEFT", unavailable, "TOPLEFT", 4, -68)
         unavailableText:SetPoint("TOPRIGHT", unavailable, "TOPRIGHT", -4, -68)
         unavailableText:SetJustifyH("CENTER")
-        unavailableText:SetText("资源未就绪")
+        unavailableText:SetText(L("Data unavailable", "资源未就绪"))
         unavailable:Hide()
 
         local hit = CreateFrame("Button", nil, card)
@@ -493,7 +497,7 @@ function Lab.CreateSources(parent, state)
         local uncollectedBadgeText = uncollectedBadge:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         uncollectedBadgeText:SetAllPoints(uncollectedBadge)
         uncollectedBadgeText:SetJustifyH("CENTER")
-        uncollectedBadgeText:SetText("未收集")
+        uncollectedBadgeText:SetText(L("Not Collected", "未收集"))
         uncollectedBadgeText:SetTextColor(0.72, 0.73, 0.74)
         uncollectedBadge:Hide()
 
@@ -530,6 +534,16 @@ function Lab.CreateSources(parent, state)
             if SC.NewAppearances and SC.NewAppearances.UpdateCardBadge then
                 SC.NewAppearances.UpdateCardBadge(hit, record.collectionId or record.id)
             end
+        end
+
+        local function presentItemIcon(record)
+            if not record then
+                itemIcon:Hide()
+                return
+            end
+            local itemId = tonumber(record.itemId or (record.itemIds and record.itemIds[1]))
+            UI.SetIconTexture(itemIcon, itemId and GetItemIcon and GetItemIcon(itemId))
+            itemIcon:Show()
         end
 
         model.scCard = card
@@ -593,7 +607,7 @@ function Lab.CreateSources(parent, state)
                 return
             end
             if hit.SetHideVisual then hit:SetHideVisual(false) end
-            if itemIcon then itemIcon:Hide() end
+            presentItemIcon(record)
             if itemRenderer then itemRenderer:Present(model, record, self.scGeneration or 1) end
             if not itemRenderer then model:Show() end
             applyOwnership(record)
@@ -651,28 +665,29 @@ function Lab.CreateSources(parent, state)
             pendingItemTooltip.itemId = appearanceRecordItemId(record)
             local titleR, titleG, titleB = appearanceTitleColor(record)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText(record.name or "未知外观", titleR, titleG, titleB)
+            local displayName = SC.Catalog.GetAppearanceDisplayName and SC.Catalog.GetAppearanceDisplayName(record)
+            GameTooltip:SetText(displayName or record.name or L("Unknown appearance", "未知外观"), titleR, titleG, titleB)
             if Lab.IsHideVisualRecord and Lab.IsHideVisualRecord(record) then
-                GameTooltip:AddLine("从预览中隐藏该部位外观。", 0.72, 0.72, 0.72, true)
+                GameTooltip:AddLine(L("Hide this slot in the preview.", "从预览中隐藏该部位外观。"), 0.72, 0.72, 0.72, true)
                 if state.IsSlotOccupied and not state:IsSlotOccupied(state.selectedSlot) then
-                    GameTooltip:AddLine(Lab.EMPTY_SLOT_TEXT or "该装备栏里没有装备物品。", 1, 0.12, 0.12, true)
+                    GameTooltip:AddLine(Lab.EMPTY_SLOT_TEXT or L("There is no item equipped in this slot.", "该装备栏里没有装备物品。"), 1, 0.12, 0.12, true)
                 elseif Lab.IsAppliedReady and Lab.IsAppliedReady() then
-                    GameTooltip:AddLine("点应用后写入当前角色，该部位不再显示模型。", 0.72, 0.72, 0.72, true)
+                    GameTooltip:AddLine(L("After Apply, this slot is hidden on the character.", "点应用后写入当前角色，该部位不再显示模型。"), 0.72, 0.72, 0.72, true)
                 else
-                    GameTooltip:AddLine("仅本地预览，当前不能应用到装备。", 1, 0.35, 0.25, true)
+                    GameTooltip:AddLine(L("Preview only; it cannot be applied to equipment.", "仅本地预览，当前不能应用到装备。"), 1, 0.35, 0.25, true)
                 end
             else
                 if record.isEquippedBase then
-                    GameTooltip:AddLine("当前穿着的原装备外观", 0.82, 0.78, 0.70, true)
+                    GameTooltip:AddLine(L("Current equipped appearance", "当前穿着的原装备外观"), 0.82, 0.78, 0.70, true)
                 end
-                GameTooltip:AddLine(record.collected and "已收藏" or "未收藏 · 仅可预览", record.collected and 0.4 or 0.7, record.collected and 1 or 0.7, 0.4)
+                GameTooltip:AddLine(record.collected and L("Collected", "已收藏") or L("Not collected · Preview only", "未收藏 · 仅可预览"), record.collected and 0.4 or 0.7, record.collected and 1 or 0.7, 0.4)
                 addAppearanceSourceTooltip(record)
                 if state.IsSlotOccupied and not state:IsSlotOccupied(state.selectedSlot) then
-                    GameTooltip:AddLine(Lab.EMPTY_SLOT_TEXT or "该装备栏里没有装备物品。", 1, 0.12, 0.12, true)
+                    GameTooltip:AddLine(Lab.EMPTY_SLOT_TEXT or L("There is no item equipped in this slot.", "该装备栏里没有装备物品。"), 1, 0.12, 0.12, true)
                 elseif state.IsAppearanceUndoTarget and state:IsAppearanceUndoTarget(state.selectedSlot, record) then
-                    GameTooltip:AddLine("左键恢复该部位的原装备外观（需确认）", 1, 0.82, 0.18)
+                    GameTooltip:AddLine(L("Left-click to restore the original appearance (confirmation required).", "左键恢复该部位的原装备外观（需确认）"), 1, 0.82, 0.18)
                 else
-                    GameTooltip:AddLine("左键写入所选槽位草稿 · 右键偏好", 0.75, 0.72, 0.66)
+                    GameTooltip:AddLine(L("Left-click to set the slot draft · Right-click to favorite", "左键写入所选槽位草稿 · 右键偏好"), 0.75, 0.72, 0.66)
                 end
             end
             GameTooltip:Show()
@@ -742,7 +757,7 @@ function Lab.CreateSources(parent, state)
         local uncollectedBadgeText = uncollectedBadge:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         uncollectedBadgeText:SetAllPoints(uncollectedBadge)
         uncollectedBadgeText:SetJustifyH("CENTER")
-        uncollectedBadgeText:SetText("未收集")
+        uncollectedBadgeText:SetText(L("Not Collected", "未收集"))
         uncollectedBadgeText:SetTextColor(0.72, 0.73, 0.74)
         uncollectedBadge:Hide()
 
@@ -845,10 +860,10 @@ function Lab.CreateSources(parent, state)
             local owned = tonumber(record.collectedCount) or 0
             local required = tonumber(record.requiredCount) or #(record.itemIds or {})
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText(record.name or "未知套装", 1, 0.82, 0.18)
-            GameTooltip:AddLine("收集进度：" .. owned .. " / " .. required, 0.45, 0.90, 0.34)
+            GameTooltip:SetText(record.name or L("Unknown set", "未知套装"), 1, 0.82, 0.18)
+            GameTooltip:AddLine(L("Collection progress: ", "收集进度：") .. owned .. " / " .. required, 0.45, 0.90, 0.34)
             addSetSourceTooltip(record)
-            GameTooltip:AddLine("左键加载本地套装预设 · 右键偏好", 0.75, 0.72, 0.66)
+            GameTooltip:AddLine(L("Left-click to load the outfit preset · Right-click to favorite", "左键加载本地套装预设 · 右键偏好"), 0.75, 0.72, 0.66)
             GameTooltip:Show()
         end)
         hit:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -884,7 +899,7 @@ function Lab.CreateSources(parent, state)
     applySet:SetWidth(112)
     applySet:SetHeight(22)
     applySet:SetPoint("BOTTOMRIGHT", setsView, "BOTTOMRIGHT", -10, 10)
-    applySet:SetText("应用套装")
+    applySet:SetText(L("Apply Set", "应用套装"))
     applySet:SetScript("OnClick", function()
         if Lab.BeginApplyWithWarnings then
             Lab.BeginApplyWithWarnings(state)
@@ -899,10 +914,10 @@ function Lab.CreateSources(parent, state)
     selectedSetName:SetWidth(210)
     selectedSetName:SetJustifyH("LEFT")
 
-    local itemEmpty = UI.CreateEmptyState(itemsView, "没有符合条件的外观")
+    local itemEmpty = UI.CreateEmptyState(itemsView, L("No matching appearances", "没有符合条件的外观"))
     itemEmpty:SetPoint("CENTER", itemsView, "CENTER", 0, 10)
     itemEmpty:Hide()
-    local setEmpty = UI.CreateEmptyState(setsView, "没有符合条件的套装")
+    local setEmpty = UI.CreateEmptyState(setsView, L("No matching sets", "没有符合条件的套装"))
     setEmpty:SetPoint("CENTER", setsView, "CENTER", 0, 10)
     setEmpty:Hide()
 
@@ -1069,14 +1084,14 @@ function Lab.CreateSources(parent, state)
                 card:SetSelected(record and state.presetRecord and record.id == state.presetRecord.id)
             end
             if #records == 0 then
-                UI.ShowEmptyState(setEmpty, host, "没有符合条件的套装", "调整搜索、职业或收藏过滤后再试。")
+                UI.ShowEmptyState(setEmpty, host, L("No matching sets", "没有符合条件的套装"), L("Adjust the search, class, or collection filters and try again.", "调整搜索、职业或收藏过滤后再试。"))
             else
                 UI.HideEmptyState(setEmpty)
             end
             if state.presetRecord then
-                selectedSetName:SetText(state.presetRecord.name or ("套装 " .. tostring(state.presetRecord.id)))
+                selectedSetName:SetText(state.presetRecord.name or (L("Set ", "套装 ") .. tostring(state.presetRecord.id)))
             else
-                selectedSetName:SetText("选择套装后可直接应用")
+                selectedSetName:SetText(L("Select a set to apply it", "选择套装后可直接应用"))
             end
             local canApplySet = false
             if state.GetSetApplyState then
@@ -1123,7 +1138,7 @@ function Lab.CreateSources(parent, state)
                 card:SetSelected(record and selected and record.id == selected.id and not isApplied)
             end
             if #records == 0 then
-                UI.ShowEmptyState(itemEmpty, host, "没有符合条件的外观", "调整搜索、来源或收藏过滤后再试。")
+                UI.ShowEmptyState(itemEmpty, host, L("No matching appearances", "没有符合条件的外观"), L("Adjust the search, source, or collection filters and try again.", "调整搜索、来源或收藏过滤后再试。"))
             else
                 UI.HideEmptyState(itemEmpty)
             end

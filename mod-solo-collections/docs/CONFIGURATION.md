@@ -50,12 +50,14 @@ Values are case-insensitive; anything else fails closed to `same`.
 #         MISC armor (no armor type) may mix with a tiered appearance
 #         of the same InventoryType
 # Invalid values fail closed to same.
-SoloCollections.Transmog.MixedArmor = same
+SoloCollections.Transmog.MixedArmor = any
 ```
 
 `SoloCollections.Transmog.MixedWeapons` only affects collected wardrobe apply.
 Bow, gun, and crossbow stay isolated from melee even when the value is `any`.
-Wand and thrown are not in that isolation set. NPC transmog still uses
+Wand and thrown are not in that isolation set. A two-handed appearance may
+only apply to a two-handed target, regardless of this setting or the legacy
+NPC weapon-mixing settings. NPC transmog still uses
 `Transmogrification.AllowMixedWeaponTypes` (distributed default STRICT).
 Values are case-insensitive; anything else fails closed to `same`.
 
@@ -63,9 +65,11 @@ Values are case-insensitive; anything else fails closed to `same`.
 # same   = weapon subclass must match
 # family = 1H axe/sword/mace; 2H axe/sword/mace/staff/polearm
 #          (dagger/fist/wand/thrown still need an exact match)
-# any    = any melee onto any melee; any bow/gun/crossbow onto any bow/gun/crossbow
+# any    = any eligible subtype within its weapon group; a two-handed appearance
+#          only applies to a two-handed weapon. Main-hand, off-hand, and generic
+#          one-hand weapons may mix. Bow/gun/crossbow remain isolated.
 # Invalid values fail closed to same.
-SoloCollections.Transmog.MixedWeapons = same
+SoloCollections.Transmog.MixedWeapons = any
 ```
 
 NPC vendor mixing still uses `Transmogrification.AllowMixedArmorTypes` and
@@ -122,10 +126,10 @@ Launch-audit decisions for the sync gaps found against LegionCore:
 幻化室批量应用按外观源物品卖价计价（至少 1 金，再乘
 `Transmogrification.ScaledCostModifier` 并可加 `CopperCost`），隐藏和清除为
 0，不读客户端数字。`ApplyBaseCopper` / `ApplySlotCopper` 已废弃。收藏室跨甲只读
-`SoloCollections.Transmog.MixedArmor`（`same` / `lower` / `any`，默认 `same`，
+`SoloCollections.Transmog.MixedArmor`（`same` / `lower` / `any`，默认 `any`，
 无效值按 `same`；`any` 时无甲种 MISC 可与同 `InventoryType` 的有甲种互幻），
 跨武器读 `SoloCollections.Transmog.MixedWeapons`（`same` / `family` / `any`，
-默认 `same`；弓/枪/弩与近战始终隔离，魔杖/投掷不在这组隔离里），不改 NPC 幻化台的
+默认 `any`；双手外观只能幻化到双手武器，主手/副手/通用单手武器可互幻；弓/枪/弩与近战始终隔离，魔杖/投掷不在这组隔离里），不改 NPC 幻化台的
 `AllowMixedArmorTypes` / `AllowMixedWeaponTypes`。type 18/19
 只对 HELLO `clientBuild` 带 `-w1` 的插件宣告；必须先部署模块再部署新 AddOn。
 外观写在装备实例上，换装不自动套到新物品。

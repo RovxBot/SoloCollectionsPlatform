@@ -25,7 +25,10 @@ backend.
 ## Features and status
 
 - A unified window for mounts, companions, toys, appearance items, and sets.
-  Transmogrification uses a separate Wardrobe window opened by its own button.
+  Transmogrification uses a separate Wardrobe window opened from its minimap button.
+- When the optional legacy DragonUI AddOn is enabled, mounts and companions use
+  its Pets & Mounts journal while retaining SoloCollections' authoritative SC2
+  state and actions.
 - Server-authoritative SC2 handshakes, account snapshots, revision deltas, and
   action results.
 - Appearance filters, collection progress, set previews, favorites, and stable
@@ -123,6 +126,8 @@ directory and use this production ownership mode:
 ```ini
 SoloCollections.Backend = Cpp
 SoloCollections.Preview.Enabled = 1
+SoloCollections.Transmog.MixedArmor = any
+SoloCollections.Transmog.MixedWeapons = any
 ```
 
 See the module repository's

@@ -4,7 +4,7 @@
 ## Author: SoloCollections contributors
 ## Version: 0.2.0
 ## Dependencies: DragonUI_NewEra
-## OptionalDeps: SoloCollections_EzUI, SoloCollections_RetailUI
+## OptionalDeps: DragonUI, SoloCollections_EzUI, SoloCollections_RetailUI
 ## X-SoloCollections-BuildChannel: stable
 ## SavedVariables: SoloCollectionsDB
 
@@ -56,3 +56,4 @@ UI\WardrobeLab\Window.lua
 UI\CollectionsFrame.lua
 Core\Diagnostics.lua
 Core\Bootstrap.lua
+UI\DragonUI\CollectionsBridge.lua
