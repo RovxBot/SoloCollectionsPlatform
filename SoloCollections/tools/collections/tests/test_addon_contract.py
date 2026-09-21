@@ -211,7 +211,7 @@ class AddonContractTests(unittest.TestCase):
         self.assertIn("name = appearanceDisplayName(store, index)", catalog)
         self.assertIn("Catalog.GetAppearanceDisplayName(record)", sources)
 
-    def test_transmog_runtime_preserves_live_appearance_and_has_card_fallbacks(self):
+    def test_transmog_runtime_preserves_live_appearance_and_renders_card_actors(self):
         launcher = read_text(ADDON / "UI" / "Launcher.lua")
         model = read_text(ADDON / "UI" / "EzWardrobe" / "Model.lua")
         sources = read_text(ADDON / "UI" / "WardrobeLab" / "Sources.lua")
@@ -219,10 +219,17 @@ class AddonContractTests(unittest.TestCase):
 
         self.assertIn("MICRO_BUTTON_ICON_COORD = { 0.08, 0.92, 0.02, 0.48 }", launcher)
         self.assertIn('SC.Localize("Transmogrify", "幻化")', launcher)
-        self.assertIn('SetKeepModelOnHide", true', model)
-        self.assertIn('itemIcon:SetDrawLayer("BACKGROUND", 1)', sources)
-        self.assertIn("local function presentItemIcon(record)", sources)
-        self.assertIn("presentItemIcon(record)", sources)
+        self.assertIn('SetKeepModelOnHide", false', model)
+        self.assertIn("queueItemRender(self, record, expectedGeneration)", model)
+        self.assertIn("local function onItemReady() end", model)
+        self.assertNotIn("cacheReady", model)
+        self.assertNotIn("local function presentItemIcon(record)", sources)
+        self.assertNotIn("card.scItemIcon", sources)
+        self.assertIn("model:SetFrameLevel(card:GetFrameLevel() + 1)", sources)
+        self.assertIn("objectModel:SetFrameLevel(model:GetFrameLevel())", sources)
+        self.assertIn("function host:EnqueueItemPresent(card, record)", sources)
+        self.assertIn("function card:RunItemPresent(record, generation, done)", sources)
+        self.assertIn("Lab.PlayDressUp(model, {", sources)
         self.assertIn("local preserveCurrentAppearance = state.HasDraft and not state:HasDraft()", preview)
         self.assertIn('signature = preserveCurrentAppearance and "CURRENT_UNIT_APPEARANCE"', preview)
 
@@ -239,6 +246,21 @@ class AddonContractTests(unittest.TestCase):
         self.assertIn('db.filters.weaponType = "ALL"', bootstrap)
         self.assertIn('{ key = "ALL", label = L("All", "全部") }', catalog)
         self.assertIn('if weaponType == "ALL" then', catalog)
+
+    def test_offhand_weapon_query_includes_one_hand_weapons_but_not_shields(self):
+        catalog = read_text(ADDON / "Core" / "Catalog.lua")
+        window = read_text(ADDON / "UI" / "WardrobeLab" / "Window.lua")
+
+        for token in (
+            "function Catalog.GetEquippedWeaponHandedness(slot)",
+            'inventoryType == "INVTYPE_WEAPONOFFHAND"',
+            'return sourceHandedness == "ONE_HAND" and (slot == "MAINHAND" or slot == "OFFHAND")',
+            'targetHandedness == "NON_WEAPON"',
+            "local function appearanceSlotMatches(slot, weaponType, weaponCategory, filters)",
+            "result.equippedWeaponHandedness = Catalog.GetEquippedWeaponHandedness(result.slot) or false",
+        ):
+            self.assertIn(token, catalog)
+        self.assertIn("SC.Catalog.GetAvailableWeaponFilters(slot)", window)
 
     def test_journal_is_lazy_and_has_shared_shell_controls(self):
         path = ADDON / "UI" / "CollectionsFrame.lua"

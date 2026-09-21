@@ -67,6 +67,32 @@ local RANGED_WEAPON_TYPES = {
     THROWN = true,
     WAND = true,
 }
+-- The wardrobe catalog stores a generic one-hand weapon under MAINHAND even
+-- when that appearance can be equipped in OFFHAND.  Keep the display query
+-- separate from the catalog's source slot so an equipped off-hand weapon can
+-- browse every valid one-hand appearance, without also receiving shields or
+-- held-in-off-hand items.
+local ONE_HAND_WEAPON_TYPES = {
+    ONE_HAND_AXE = true,
+    ONE_HAND_MACE = true,
+    ONE_HAND_SWORD = true,
+    WAR_GLAIVE = true,
+    FIST_WEAPON = true,
+    DAGGER = true,
+}
+local TWO_HAND_WEAPON_TYPES = {
+    TWO_HAND_AXE = true,
+    TWO_HAND_MACE = true,
+    TWO_HAND_SWORD = true,
+    POLEARM = true,
+    STAFF = true,
+    FISHING_POLE = true,
+}
+local WEAPON_SLOT_INVENTORY_ID = {
+    MAINHAND = 16,
+    OFFHAND = 17,
+    RANGED = 18,
+}
 
 Catalog.WEAPON_FILTERS = {
     { key = "ONE_HAND_AXE", label = L("One-Hand Axe", "单手斧"), main = true, off = true },
@@ -95,6 +121,55 @@ end
 
 function Catalog.IsArmorFilterSlot(slot)
     return slot and not WEAPON_SLOTS[slot]
+end
+
+local function equippedItemIdForSlot(slot)
+    local inventorySlot = WEAPON_SLOT_INVENTORY_ID[slot]
+    if not inventorySlot then
+        return nil
+    end
+    local itemId = GetInventoryItemID and tonumber(GetInventoryItemID("player", inventorySlot))
+    if not itemId or itemId <= 0 then
+        local link = GetInventoryItemLink and GetInventoryItemLink("player", inventorySlot)
+        itemId = type(link) == "string" and tonumber(string.match(link, "item:(%d+)")) or nil
+    end
+    return itemId and itemId > 0 and itemId or nil
+end
+
+-- Returns ONE_HAND, TWO_HAND, NON_WEAPON, or nil while an equipped item's
+-- client data is still unavailable.  The inventory-location token is stable
+-- across the English and Chinese 3.3.5 clients, unlike localized class names.
+function Catalog.GetEquippedWeaponHandedness(slot)
+    if slot ~= "MAINHAND" and slot ~= "OFFHAND" then
+        return nil
+    end
+    local itemId = equippedItemIdForSlot(slot)
+    if not itemId or not GetItemInfo then
+        return nil
+    end
+    local inventoryType = select(9, GetItemInfo(itemId))
+    if inventoryType == "INVTYPE_2HWEAPON" then
+        return "TWO_HAND"
+    end
+    if inventoryType == "INVTYPE_WEAPON"
+        or inventoryType == "INVTYPE_WEAPONMAINHAND"
+        or inventoryType == "INVTYPE_WEAPONOFFHAND" then
+        return "ONE_HAND"
+    end
+    if slot == "OFFHAND" and (inventoryType == "INVTYPE_SHIELD" or inventoryType == "INVTYPE_HOLDABLE") then
+        return "NON_WEAPON"
+    end
+    return nil
+end
+
+local function weaponHandednessForType(weaponType)
+    if ONE_HAND_WEAPON_TYPES[weaponType] then
+        return "ONE_HAND"
+    end
+    if TWO_HAND_WEAPON_TYPES[weaponType] then
+        return "TWO_HAND"
+    end
+    return nil
 end
 
 -- 1-based player inventory slot ids (3.3.5 InventorySlotId) for the armor
@@ -196,24 +271,17 @@ end
 
 function Catalog.GetAvailableWeaponFilters(slot)
     local result = {}
-    local allowed
-    if SC.IdentityRegistry and SC.IdentityRegistry.GetWeaponTypes then
-        if slot == "RANGED" then
-            allowed = SC.IdentityRegistry.GetWeaponTypes("MAINHAND")
-        else
-            allowed = SC.IdentityRegistry.GetWeaponTypes(slot)
-        end
-    end
-    local hasAllowed = false
-    if type(allowed) == "table" then
-        for _ in pairs(allowed) do
-            hasAllowed = true
-            break
-        end
-    end
+    local equippedHandedness = Catalog.GetEquippedWeaponHandedness(slot)
     for _, option in ipairs(Catalog.WEAPON_FILTERS) do
-        if Catalog.WeaponFilterSupportsSlot(option, slot)
-            and ((not hasAllowed) or allowed[option.key]) then
+        local supported = Catalog.WeaponFilterSupportsSlot(option, slot)
+        if slot == "MAINHAND" and equippedHandedness then
+            supported = supported and weaponHandednessForType(option.key) == equippedHandedness
+        elseif slot == "OFFHAND" and equippedHandedness == "ONE_HAND" then
+            supported = ONE_HAND_WEAPON_TYPES[option.key] and true or false
+        elseif slot == "OFFHAND" and equippedHandedness == "NON_WEAPON" then
+            supported = option.key == "SHIELD" or option.key == "OFFHAND_ITEM"
+        end
+        if supported then
             result[#result + 1] = option
         end
     end
@@ -227,10 +295,8 @@ function Catalog.GetAvailableWeaponFilters(slot)
             end
         end
     end
-    -- The wardrobe server validates the equipped item's actual handedness.
-    -- Presenting every compatible-slot subtype here lets a player choose (for
-    -- example) a staff appearance for a two-hand sword instead of silently
-    -- inheriting a class-specific subtype filter.
+    -- Collection appearances deliberately ignore class proficiency.  The
+    -- server validates the equipped item's physical category and handedness.
     table.insert(result, 1, { key = "ALL", label = L("All", "全部") })
     return result
 end
@@ -743,8 +809,8 @@ local function materializeAppearance(store, index)
     return record
 end
 
-local function resolvedWeaponType(record)
-    local weaponType = record.weaponCategory or record.weaponType
+local function resolvedWeaponTypeValues(weaponType, weaponCategory)
+    weaponType = weaponCategory or weaponType
     -- Warglaives are one-handed swords in the 3.3.5 item subclass table.
     -- Keep the special camera key in Data, but never expose a Retail-only
     -- "warglaive" filter category in the WotLK wardrobe.
@@ -752,6 +818,61 @@ local function resolvedWeaponType(record)
         return "ONE_HAND_SWORD"
     end
     return weaponType
+end
+
+local function resolvedWeaponType(record)
+    return resolvedWeaponTypeValues(record.weaponType, record.weaponCategory)
+end
+
+local function queryWeaponHandedness(filters)
+    local resolved = filters and filters.equippedWeaponHandedness
+    if resolved ~= nil then
+        return resolved or nil
+    end
+    if filters and (filters.slot == "MAINHAND" or filters.slot == "OFFHAND") then
+        return Catalog.GetEquippedWeaponHandedness(filters.slot)
+    end
+    return nil
+end
+
+-- The source slot is an item-template property, not an equip-position rule.
+-- Generic one-hand weapons are catalogued as MAINHAND even though a player
+-- can wear them in OFFHAND. Match the equipped item's physical category here
+-- before the subtype filter runs.
+local function appearanceSlotMatches(slot, weaponType, weaponCategory, filters)
+    local selected = filters and filters.slot
+    if not selected or selected == "ALL" then
+        return true
+    end
+    local resolvedType = resolvedWeaponTypeValues(weaponType, weaponCategory)
+    local sourceHandedness = weaponHandednessForType(resolvedType)
+    local targetHandedness = queryWeaponHandedness(filters)
+
+    if selected == "MAINHAND" then
+        if slot ~= "MAINHAND" then
+            return false
+        end
+        return not targetHandedness or sourceHandedness == targetHandedness
+    end
+
+    if selected == "OFFHAND" then
+        if targetHandedness == "ONE_HAND" then
+            return sourceHandedness == "ONE_HAND" and (slot == "MAINHAND" or slot == "OFFHAND")
+        end
+        if targetHandedness == "NON_WEAPON" then
+            -- Shield and held-item records are OFFHAND rows with no weapon
+            -- handedness. Explicit weapon families (including NPC-only OTHER
+            -- records) cannot be offered for those armor targets.
+            return slot == "OFFHAND" and (resolvedType == nil
+                or resolvedType == "SHIELD"
+                or resolvedType == "OFFHAND_ITEM"
+                or resolvedType == "HOLDABLE"
+                or resolvedType == "HELD_IN_OFFHAND")
+        end
+        return slot == "OFFHAND"
+    end
+
+    return slot == selected
 end
 
 local function armorTypeMatches(record, filters)
@@ -981,6 +1102,11 @@ local function resolvedFilters(filters)
                 result[key] = defaultValue
             end
         end
+    end
+    -- Resolve once per query rather than asking GetItemInfo for every catalog
+    -- row. `false` is an intentional cached "not yet known" result.
+    if result.slot == "MAINHAND" or result.slot == "OFFHAND" then
+        result.equippedWeaponHandedness = Catalog.GetEquippedWeaponHandedness(result.slot) or false
     end
     return result
 end
@@ -1262,7 +1388,8 @@ local function filterMatches(category, record, query, filters, includeCollection
     if usesClassFilter and not classMatches(record, filters.classToken) then
         return false
     end
-    if category == "APPEARANCES" and filters.slot and filters.slot ~= "ALL" and record.slot ~= filters.slot then
+    if category == "APPEARANCES" and not appearanceSlotMatches(
+        record.slot, record.weaponType, record.weaponCategory, filters) then
         return false
     end
     if category == "APPEARANCES" and not armorTypeMatches(record, filters) then
@@ -1376,7 +1503,11 @@ local function forEachMatchingAppearance(query, filters, includeCollectionState,
     local slotFilter = filters.slot
     local checkSlot = slotFilter ~= nil and slotFilter ~= "ALL"
     for index = 1, store.count do
-        if not checkSlot or appearanceSlotName(store, index) == slotFilter then
+        if not checkSlot or appearanceSlotMatches(
+            appearanceSlotName(store, index),
+            appearanceWeaponType(store, index),
+            appearanceWeaponCategory(store, index),
+            filters) then
             local probe = fillAppearanceProbe(store, index, needsSource)
             overlayCollectionState("APPEARANCES", probe, false)
             if filterMatches("APPEARANCES", probe, query, filters, includeCollectionState) then

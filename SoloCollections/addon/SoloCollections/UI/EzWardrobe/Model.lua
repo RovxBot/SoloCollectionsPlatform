@@ -141,6 +141,7 @@ local TransmogModelMixin = Model.TransmogModelMixin
 local WardrobeItemsModelMixin = Model.WardrobeItemsModelMixin
 local itemRenderQueue = {}
 local itemRenderDriver = CreateFrame("Frame")
+local MODEL_READY_MAX_CHECKS = 12
 
 local function safeCall(object, method, ...)
     if not object or type(object[method]) ~= "function" then return false end
@@ -366,6 +367,7 @@ end
 local function setUnavailable(lifecycle, reason)
     local frame = lifecycle.frame
     lifecycle.rebuildPhase = nil
+    lifecycle.modelReadyChecks = nil
     frame.scRuntimeUnavailableReason = reason
     frame:SetScript("OnUpdate", nil)
     frame:Hide()
@@ -457,19 +459,18 @@ function WardrobeItemsModelMixin:PrepareTransmorpherFrame()
     self.frame:SetScript("OnUpdate", nil)
     safeCall(self.frame, "SetAutoDress", true)
     safeCall(self.frame, "SetDoBlend", true)
-    -- A recycled card can briefly be hidden by the surrounding Transmog
-    -- frame while its item-cache callback is still pending.  Keeping its
-    -- actor prevents a successful TryOn from flashing once and then being
-    -- discarded before the card is painted.
-    safeCall(self.frame, "SetKeepModelOnHide", true)
-    safeCall(self.frame, "SetAlpha", 1)
+    -- A grid card is created while its parent page can still be hidden.  On
+    -- 3.3.5, retaining that hidden actor leaves an empty model after its first
+    -- paint.  Small cards must allow the visible SetUnit rebuild to replace it;
+    -- only the large left preview retains its actor across page hides.
+    safeCall(self.frame, "SetKeepModelOnHide", false)
     safeCall(self.frame, "SetModelScale", 1)
 
     -- Transmorpher DressingRoom:Reset resets model-space state, then rebuilds
     -- the player's race/sex model. Split ClearModel and SetUnit across frames
     -- so 3.3.5a does not interpolate a freed animation table.
     self.suppressModelEvent = true
-    if self.rebuildPhase ~= "clear" and self.rebuildPhase ~= "unit" and self.rebuildPhase ~= "dress" then
+    if self.rebuildPhase ~= "clear" and self.rebuildPhase ~= "unit" and self.rebuildPhase ~= "model" then
         -- DressUpModel OnLoad already SetUnit. Wait one frame before ClearModel.
         safeCall(self.frame, "SetAlpha", 0)
         safeCall(self.frame, "SetPosition", 0, 0, 0)
@@ -490,8 +491,20 @@ function WardrobeItemsModelMixin:PrepareTransmorpherFrame()
         end
         syncCardViewport(self.frame)
         applyTransmorpherLight(self.frame)
-        self.rebuildPhase = "dress"
+        self.modelReadyChecks = 0
+        self.rebuildPhase = "model"
         return false, "REBUILD_PENDING"
+    end
+    if self.rebuildPhase == "model" then
+        -- SetUnit replaces the native actor asynchronously.  Calling TryOn
+        -- before its model path exists produces one visible frame, then the
+        -- late replacement clears the card.  Wait only for that actor (never
+        -- for item cache data), with a ceiling for broken client callbacks.
+        self.modelReadyChecks = (self.modelReadyChecks or 0) + 1
+        if not modelPathReady(self.frame) and self.modelReadyChecks < MODEL_READY_MAX_CHECKS then
+            return false, "REBUILD_PENDING"
+        end
+        self.modelReadyChecks = nil
     end
     return true, "READY"
 end
@@ -547,6 +560,7 @@ function WardrobeItemsModelMixin:RenderTransmorpherWeapon(record)
     safeCall(self.frame, "SetSequence", setup.sequence)
     safeCall(self.frame, "SetAlpha", 1)
     self.rebuildPhase = nil
+    self.modelReadyChecks = nil
     return true, setupReason
 end
 
@@ -586,6 +600,7 @@ function WardrobeItemsModelMixin:RenderTransmorpherArmor(record)
     safeCall(self.frame, "SetSequence", setup.sequence)
     safeCall(self.frame, "SetAlpha", 1)
     self.rebuildPhase = nil
+    self.modelReadyChecks = nil
     return true, setupReason
 end
 
@@ -634,36 +649,27 @@ function WardrobeItemsModelMixin:Reload(record, pageGeneration, force)
         return setUnavailable(self, typeReason)
     end
 
-    -- Transmorpher clears each recycled model before QueryItem and only calls
-    -- Reset/Undress/TryOn after item data is ready.  The global queue submits
-    -- at most one cached item TryOn per UI frame. This preserves its renderer
-    -- order without issuing 18 armor or shield rebuilds in the same frame.
+    -- The catalog's source item ID is already sufficient for DressUpModel's
+    -- native TryOn path.  Start that renderer immediately: the 3.3.5 item
+    -- cache can take a long time to answer and must never turn every card into
+    -- a static icon or a blank placeholder.  ItemQuery only warms the local
+    -- cache in the background; it must not rebuild an actor that is already
+    -- displaying its appearance.
+    -- The shared queue still submits at most one card per UI frame so armor
+    -- and shield rebuilds retain Transmorpher's safe render order.
     self.transmorpherSetup = nil
     self.weaponDescriptor = nil
     self.pendingItemRender = nil
     self.rebuildPhase = nil
+    self.modelReadyChecks = nil
     safeCall(self.frame, "SetAlpha", 0)
     local expectedGeneration = self.generation
-    local function onItemReady(itemId, success)
-        if self.generation ~= expectedGeneration
-            or self.activeGeneration ~= expectedGeneration
-            or not self.record
-            or tonumber(self.record.itemId) ~= tonumber(itemId) then
-            return
-        end
-        if not success then
-            setUnavailable(self, "ITEM_QUERY_FAILED")
-            return
-        end
-        queueItemRender(self, self.record, expectedGeneration)
-    end
+    local function onItemReady() end
     if ItemQuery and type(ItemQuery.Query) == "function" then
-        local requested, queryReason = ItemQuery:Query(record.itemId, onItemReady)
-        if not requested then return setUnavailable(self, queryReason or "ITEM_QUERY_FAILED") end
-        return true, queryReason or "QUERYING"
+        ItemQuery:Query(record.itemId, onItemReady)
     end
     queueItemRender(self, record, expectedGeneration)
-    return true, typeChanged and "TYPE_CHANGED" or "QUEUED"
+    return true, "QUEUED"
 end
 
 function WardrobeItemsModelMixin:Clear()
@@ -676,6 +682,7 @@ function WardrobeItemsModelMixin:Clear()
     self.weaponDescriptor = nil
     self.pendingItemRender = nil
     self.rebuildPhase = nil
+    self.modelReadyChecks = nil
     self.frame:SetScript("OnUpdate", nil)
     self.frame.scRecord = nil
     self.frame.scRecordId = nil

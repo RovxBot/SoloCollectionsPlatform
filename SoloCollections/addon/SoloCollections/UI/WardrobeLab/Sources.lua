@@ -308,9 +308,77 @@ function Lab.CreateSources(parent, state)
     host.setPage = 1
     host.itemCards = {}
     host.setCards = {}
+    host.scItemQueue = {}
+    host.scItemPresenting = false
     host.scSetQueue = {}
     host.scSetPresenting = false
-    local itemRenderer = SC.WardrobeUI and SC.WardrobeUI.ItemCardRenderer
+
+    function host:ResetItemPresentQueue()
+        self.scItemQueue = {}
+        self.scItemPresenting = false
+        self.scItemActiveCard = nil
+        self.scItemActiveGeneration = nil
+    end
+
+    function host:CancelItemPresent(card)
+        for index = #self.scItemQueue, 1, -1 do
+            if self.scItemQueue[index].card == card then
+                table.remove(self.scItemQueue, index)
+            end
+        end
+        if self.scItemPresenting and self.scItemActiveCard == card then
+            self.scItemPresenting = false
+            self.scItemActiveCard = nil
+            self.scItemActiveGeneration = nil
+            if Lab.StopDressUp then Lab.StopDressUp(card.scModel) end
+        end
+    end
+
+    function host:PumpItemPresent()
+        if self.scItemPresenting then return end
+        while true do
+            local job = table.remove(self.scItemQueue, 1)
+            if not job then return end
+            if job.generation == job.card.scGeneration and job.card.scRecord
+                and job.card.RunItemPresent then
+                self.scItemPresenting = true
+                self.scItemActiveCard = job.card
+                self.scItemActiveGeneration = job.generation
+                job.card:RunItemPresent(job.record, job.generation, function()
+                    if self.scItemActiveCard ~= job.card
+                        or self.scItemActiveGeneration ~= job.generation then
+                        return
+                    end
+                    self.scItemPresenting = false
+                    self.scItemActiveCard = nil
+                    self.scItemActiveGeneration = nil
+                    self:PumpItemPresent()
+                end)
+                return
+            end
+        end
+    end
+
+    function host:EnqueueItemPresent(card, record)
+        local generation = card.scGeneration
+        if self.scItemPresenting and self.scItemActiveCard == card
+            and self.scItemActiveGeneration == generation then
+            return
+        end
+        for index, job in ipairs(self.scItemQueue) do
+            if job.card == card then
+                self.scItemQueue[index] = { card = card, record = record, generation = generation }
+                self:PumpItemPresent()
+                return
+            end
+        end
+        self.scItemQueue[#self.scItemQueue + 1] = {
+            card = card,
+            record = record,
+            generation = generation,
+        }
+        self:PumpItemPresent()
+    end
 
     function host:ResetSetPresentQueue()
         self.scSetQueue = {}
@@ -436,22 +504,20 @@ function Lab.CreateSources(parent, state)
 
         local model = CreateFrame("DressUpModel", nil, card)
         anchorModelToCard(model, card, ITEM_WIDTH, ITEM_HEIGHT)
+        -- A native 3D region at the card's inherited level can be sorted
+        -- beneath the card's opaque background once the first paint finishes.
+        -- Keep the actor above that background, with the input/ownership layer
+        -- still two levels higher so cards remain clickable.
+        model:SetFrameLevel(card:GetFrameLevel() + 1)
         model:EnableMouse(false)
         if SC.ModelProvider and SC.ModelProvider.ArmDressUpFrame then
             SC.ModelProvider.ArmDressUpFrame(model)
         end
         local objectModel = CreateFrame("PlayerModel", nil, card)
         anchorModelToCard(objectModel, card, ITEM_WIDTH, ITEM_HEIGHT)
+        objectModel:SetFrameLevel(model:GetFrameLevel())
         objectModel:EnableMouse(false)
         objectModel:Hide()
-        local itemIcon = card:CreateTexture(nil, "ARTWORK")
-        itemIcon:SetWidth(48)
-        itemIcon:SetHeight(48)
-        itemIcon:SetPoint("CENTER", card, "CENTER", 0, 8)
-        -- Stay behind a successful DressUpModel, but provide an immediately
-        -- recognizable fallback if build 12340 discards a recycled actor.
-        itemIcon:SetDrawLayer("BACKGROUND", 1)
-        itemIcon:Hide()
 
         local unavailable = CreateFrame("Frame", nil, card)
         unavailable:SetAllPoints(card)
@@ -536,68 +602,70 @@ function Lab.CreateSources(parent, state)
             end
         end
 
-        local function presentItemIcon(record)
-            if not record then
-                itemIcon:Hide()
-                return
-            end
-            local itemId = tonumber(record.itemId or (record.itemIds and record.itemIds[1]))
-            UI.SetIconTexture(itemIcon, itemId and GetItemIcon and GetItemIcon(itemId))
-            itemIcon:Show()
-        end
-
         model.scCard = card
         model.scObjectModel = objectModel
         model.scUnavailable = unavailable
         model.scUnavailableIcon = unavailableIcon
         model.scUnavailableText = unavailableText
-        if itemRenderer then itemRenderer:Attach(model, objectModel) end
 
         local function stopCardModels()
-            local lifecycle = model.scEzWardrobeLifecycle
-            if lifecycle then
-                lifecycle.generation = (lifecycle.generation or 0) + 1
-                lifecycle.activeGeneration = lifecycle.generation
-                lifecycle.record = nil
-                lifecycle.recordKey = nil
-                lifecycle.pendingItemRender = nil
-                lifecycle.transmorpherSetup = nil
-                lifecycle.weaponDescriptor = nil
-                model:SetScript("OnUpdate", nil)
-            end
+            if Lab.StopDressUp then Lab.StopDressUp(model) end
             if model.ClearModel then model:ClearModel() end
             model:Hide()
             if objectModel.ClearModel then objectModel:ClearModel() end
             objectModel:Hide()
-            if itemIcon then itemIcon:Hide() end
             if unavailable then unavailable:Hide() end
+        end
+
+        function card:RunItemPresent(record, generation, done)
+            local finished = false
+            local function finish()
+                if finished then return end
+                finished = true
+                if done then done() end
+            end
+            local itemId = appearanceRecordItemId(record)
+            if not itemId or not Lab.PlayDressUp then
+                return finish()
+            end
+            local ok = Lab.PlayDressUp(model, {
+                undress = true,
+                items = { "item:" .. tostring(itemId) },
+                onReady = function()
+                    if self.scGeneration == generation and self.scRecord
+                        and self.scRecord.id == record.id then
+                        self.scReadyGeneration = generation
+                    end
+                    finish()
+                end,
+                onUnavailable = finish,
+            })
+            if not ok then finish() end
         end
 
         function card:SetRecord(record)
             local changed = not record or self.scRecordId ~= record.id
-            if changed then self.scGeneration = (self.scGeneration or 0) + 1 end
+            if changed then
+                self.scGeneration = (self.scGeneration or 0) + 1
+                self.scReadyGeneration = nil
+                host:CancelItemPresent(self)
+            end
             self.scRecord = record
             if not record then
                 self.scRecordId = nil
                 applyOwnership(nil)
                 self:SetApplied(false)
                 self:SetUndo(false)
-                if itemIcon then itemIcon:Hide() end
                 if hit.SetHideVisual then hit:SetHideVisual(false) end
-                if itemRenderer then
-                    itemRenderer:Clear(model, self.scGeneration)
-                else
-                    model:ClearModel()
-                    objectModel:ClearModel()
-                    self:Hide()
-                end
+                stopCardModels()
+                self:Hide()
                 return
             end
             self:Show()
             self.scRecordId = record.id
             if Lab.IsHideVisualRecord and Lab.IsHideVisualRecord(record) then
-                -- ItemCardRenderer:Clear also hides the card frame. Keep the
-                -- empty collected tile visible and only stop the 3D presenter.
+                -- Keep the empty collected tile visible and only stop its 3D
+                -- presenter.
                 stopCardModels()
                 border:SetCollected(true)
                 applyOwnership(record)
@@ -607,9 +675,10 @@ function Lab.CreateSources(parent, state)
                 return
             end
             if hit.SetHideVisual then hit:SetHideVisual(false) end
-            presentItemIcon(record)
-            if itemRenderer then itemRenderer:Present(model, record, self.scGeneration or 1) end
-            if not itemRenderer then model:Show() end
+            if changed then stopCardModels() end
+            if changed or self.scReadyGeneration ~= self.scGeneration then
+                host:EnqueueItemPresent(self, record)
+            end
             applyOwnership(record)
             if record.favorite then favorite:Show() else favorite:Hide() end
         end
@@ -618,18 +687,14 @@ function Lab.CreateSources(parent, state)
             self.scGeneration = (self.scGeneration or 0) + 1
             self.scRecord = nil
             self.scRecordId = nil
+            self.scReadyGeneration = nil
+            host:CancelItemPresent(self)
             applyOwnership(nil)
             self:SetApplied(false)
             self:SetUndo(false)
-            if itemIcon then itemIcon:Hide() end
             if hit.SetHideVisual then hit:SetHideVisual(false) end
-            if itemRenderer then
-                itemRenderer:Clear(model, self.scGeneration)
-            else
-                model:ClearModel()
-                objectModel:ClearModel()
-                self:Hide()
-            end
+            stopCardModels()
+            self:Hide()
         end
 
         function card:SetSelected(value)
@@ -702,7 +767,6 @@ function Lab.CreateSources(parent, state)
 
         card.scModel = model
         card.scObjectModel = objectModel
-        card.scItemIcon = itemIcon
         card.scHitFrame = hit
         card.scBorder = border
         card.scSelected = selected
@@ -941,6 +1005,7 @@ function Lab.CreateSources(parent, state)
         else
             itemsView:Hide()
             setsView:Show()
+            self:ResetItemPresentQueue()
             for _, card in ipairs(self.itemCards) do
                 card:ClearRenderer()
             end
@@ -1147,6 +1212,7 @@ function Lab.CreateSources(parent, state)
     end
 
     function host:ClearPresenters(reason)
+        self:ResetItemPresentQueue()
         self:ResetSetPresentQueue()
         for _, card in ipairs(self.itemCards) do
             card:ClearRenderer()

@@ -68,7 +68,11 @@ class WardrobeCameraSetContractTests(unittest.TestCase):
         source = read_text(EZ_WARDROBE_MODEL)
         self.assertIn("local ItemQuery = SC.TransmorpherItemQuery", source)
         self.assertIn("ItemQuery:Query(record.itemId, onItemReady)", source)
-        self.assertIn("queueItemRender(self, self.record, expectedGeneration)", source)
+        self.assertIn("local function onItemReady() end", source)
+        self.assertIn("queueItemRender(self, record, expectedGeneration)", source)
+        self.assertIn("local MODEL_READY_MAX_CHECKS = 12", source)
+        self.assertIn('self.rebuildPhase = "model"', source)
+        self.assertIn("modelPathReady(self.frame)", source)
         self.assertIn('and "TRANSMORPHER_ARMOR" or "TRANSMORPHER_WEAPON"', source)
         self.assertIn("target:RenderTransmorpherItem(target.record)", source)
 
