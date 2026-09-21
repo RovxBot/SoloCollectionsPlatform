@@ -31,17 +31,12 @@ local PORTRAITS = {
     },
     WARDROBE = {
         texture = function()
-            if SC.RetailUI and type(SC.RetailUI.GetWardrobePortraitPath) == "function" then
-                return SC.RetailUI.GetWardrobePortraitPath()
-            end
-            return "Interface\\Icons\\inv_chest_cloth_17"
+            -- This project-owned portrait already has transparent corners. It
+            -- remains round on the 3.3.5 client, whose portrait frame cannot
+            -- mask an arbitrary square item icon.
+            return UI.Media and UI.Media.tabs and UI.Media.tabs.WARDROBE
         end,
-        fallback = function()
-            if Assets and type(Assets.Path) == "function" then
-                return Assets.Path("Textures\\UI-MicroButton-Transmogrify-Up.tga")
-            end
-            return "Interface\\Icons\\INV_Misc_QuestionMark"
-        end,
+        fallback = "Interface\\Icons\\INV_Misc_QuestionMark",
         texCoord = { 0, 1, 0, 1 },
         precut = true,
         dragonUI = true,

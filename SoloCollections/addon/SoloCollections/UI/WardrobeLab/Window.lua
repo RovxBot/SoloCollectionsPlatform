@@ -61,6 +61,8 @@ local function refreshTransmogPage()
 end
 
 local function transmogPortraitPath()
+    local wardrobePortrait = UI.Media and UI.Media.tabs and UI.Media.tabs.WARDROBE
+    if wardrobePortrait then return wardrobePortrait end
     if UI.EzCollections and UI.EzCollections.AssetPath then
         local path = UI.EzCollections:AssetPath("Textures\\UI-MicroButton-Transmogrify-Up.tga")
         if path then return path end

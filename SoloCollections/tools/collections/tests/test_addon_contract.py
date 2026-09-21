@@ -326,6 +326,13 @@ class AddonContractTests(unittest.TestCase):
         self.assertIn("SoloCollectionsTransmogMinimapButton", launcher)
         self.assertNotIn("UI.Media.collectedFrame", launcher)
 
+    def test_wardrobe_portraits_use_the_transparent_project_asset(self):
+        portraits = read_text(ADDON / "UI" / "EzCollections" / "Templates.lua")
+        window = read_text(ADDON / "UI" / "WardrobeLab" / "Window.lua")
+
+        self.assertIn("return UI.Media and UI.Media.tabs and UI.Media.tabs.WARDROBE", portraits)
+        self.assertIn("local wardrobePortrait = UI.Media and UI.Media.tabs and UI.Media.tabs.WARDROBE", window)
+
     def test_retail_search_uses_three_slice_and_progress_uses_clipped_inner_bar(self):
         templates = read_text(ADDON / "UI" / "Templates.lua")
         three_slice = lua_function_region(templates, "UI.CreateThreeSlice")
