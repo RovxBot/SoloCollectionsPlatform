@@ -45,7 +45,6 @@ char const* OwnedSourceFailureStatus(Player* player, CollectionId appearanceId)
     AppearanceCollectionDefinition const* definition = GetAppearanceCatalog().Find(appearanceId);
     if (!player || !definition)
         return "SKILL_REQUIRED";
-    std::uint32_t classMask = player->getClassMask();
     bool sawTemplate = false;
     for (std::uint32_t sourceItemId : definition->SourceItemIds)
     {
@@ -53,8 +52,7 @@ char const* OwnedSourceFailureStatus(Player* player, CollectionId appearanceId)
         if (!source)
             continue;
         sawTemplate = true;
-        if (source->AllowableClass == 0 || source->AllowableClass == static_cast<std::uint32_t>(-1)
-            || (source->AllowableClass & classMask) != 0)
+        if (sTransmogrification->IsCollectedVisualSourceClassAllowed(player, source))
             return "SKILL_REQUIRED";
     }
     return sawTemplate ? "CLASS_RESTRICTED" : "SKILL_REQUIRED";
@@ -67,11 +65,19 @@ char const* CollectedApplyFailureStatus(Player* player, CollectionId appearanceI
         return "SKILL_REQUIRED";
     bool weaponBlock = false;
     bool armorBlock = false;
+    bool classEligibleSource = false;
+    bool weaponSkillEligibleSource = false;
     for (std::uint32_t sourceItemId : definition->SourceItemIds)
     {
         ItemTemplate const* source = sObjectMgr->GetItemTemplate(sourceItemId);
         if (!source)
             continue;
+        if (!sTransmogrification->IsCollectedVisualSourceClassAllowed(player, source))
+            continue;
+        classEligibleSource = true;
+        if (!sTransmogrification->IsCollectedVisualSourceWeaponSkillAllowed(player, source))
+            continue;
+        weaponSkillEligibleSource = true;
         if (sTransmogrification->CanApplyCollectedVisual(player, target, source))
             return "SKILL_REQUIRED";
         if (source->Class == ITEM_CLASS_WEAPON && target->Class == ITEM_CLASS_WEAPON)
@@ -79,6 +85,10 @@ char const* CollectedApplyFailureStatus(Player* player, CollectionId appearanceI
         else if (source->Class == ITEM_CLASS_ARMOR && target->Class == ITEM_CLASS_ARMOR)
             armorBlock = true;
     }
+    if (!classEligibleSource)
+        return "CLASS_RESTRICTED";
+    if (!weaponSkillEligibleSource)
+        return "SKILL_REQUIRED";
     if (weaponBlock)
         return "WEAPON_TYPE";
     if (armorBlock)

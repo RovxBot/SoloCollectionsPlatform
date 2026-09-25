@@ -867,9 +867,11 @@ bool CollectedWeaponFamilyAllowed(uint32 targetSub, uint32 sourceSub)
         case ITEM_SUBCLASS_WEAPON_AXE:
         case ITEM_SUBCLASS_WEAPON_SWORD:
         case ITEM_SUBCLASS_WEAPON_MACE:
+        case ITEM_SUBCLASS_WEAPON_FIST:
             return sourceSub == ITEM_SUBCLASS_WEAPON_AXE
                 || sourceSub == ITEM_SUBCLASS_WEAPON_SWORD
-                || sourceSub == ITEM_SUBCLASS_WEAPON_MACE;
+                || sourceSub == ITEM_SUBCLASS_WEAPON_MACE
+                || sourceSub == ITEM_SUBCLASS_WEAPON_FIST;
         case ITEM_SUBCLASS_WEAPON_AXE2:
         case ITEM_SUBCLASS_WEAPON_SWORD2:
         case ITEM_SUBCLASS_WEAPON_MACE2:
@@ -880,6 +882,12 @@ bool CollectedWeaponFamilyAllowed(uint32 targetSub, uint32 sourceSub)
                 || sourceSub == ITEM_SUBCLASS_WEAPON_MACE2
                 || sourceSub == ITEM_SUBCLASS_WEAPON_STAFF
                 || sourceSub == ITEM_SUBCLASS_WEAPON_POLEARM;
+        case ITEM_SUBCLASS_WEAPON_BOW:
+        case ITEM_SUBCLASS_WEAPON_GUN:
+        case ITEM_SUBCLASS_WEAPON_CROSSBOW:
+            return sourceSub == ITEM_SUBCLASS_WEAPON_BOW
+                || sourceSub == ITEM_SUBCLASS_WEAPON_GUN
+                || sourceSub == ITEM_SUBCLASS_WEAPON_CROSSBOW;
         default:
             return false;
     }
@@ -908,6 +916,15 @@ bool Transmogrification::CanApplyCollectedVisual(Player* player, ItemTemplate co
     if (source->Class != target->Class)
         return false;
 
+    // Keep item eligibility and class-restricted appearance boundaries. The
+    // armor skill/race gates are deliberately not re-applied: retail-style
+    // cross-armor appearance use must not depend on the target's proficiency.
+    if (!IsItemTransmogrifiable(source, player->GetGUID()) ||
+        !IsItemTransmogrifiable(target, player->GetGUID()) ||
+        !IsCollectedVisualSourceClassAllowed(player, source) ||
+        !IsCollectedVisualSourceWeaponSkillAllowed(player, source))
+        return false;
+
     if (source->InventoryType == INVTYPE_BAG ||
         source->InventoryType == INVTYPE_RELIC ||
         source->InventoryType == INVTYPE_FINGER ||
@@ -924,8 +941,10 @@ bool Transmogrification::CanApplyCollectedVisual(Player* player, ItemTemplate co
         target->InventoryType == INVTYPE_QUIVER)
         return false;
 
-    // The player is already wearing `target`. NPC SuitableFor gates
-    // (armor skill, AllowableClass) must not block a collected visual.
+    // The player is already wearing `target`. NPC armor-skill and target
+    // AllowableClass gates must not block a collected visual. The source
+    // AllowableClass was checked above so class-restricted appearances remain
+    // restricted to their owning class.
     if (IsRangedWeapon(source->Class, source->SubClass) != IsRangedWeapon(target->Class, target->SubClass))
         return false;
 
@@ -991,6 +1010,28 @@ bool Transmogrification::CanApplyCollectedVisual(Player* player, ItemTemplate co
     return true;
 }
 
+bool Transmogrification::IsCollectedVisualSourceClassAllowed(Player* player, ItemTemplate const* source) const
+{
+    if (!player || !source)
+        return false;
+
+    std::uint32_t const allowableClass = source->AllowableClass;
+    return allowableClass == 0 || allowableClass == static_cast<std::uint32_t>(-1) ||
+        (allowableClass & player->getClassMask()) != 0;
+}
+
+bool Transmogrification::IsCollectedVisualSourceWeaponSkillAllowed(Player* player, ItemTemplate const* source) const
+{
+    if (!player || !source)
+        return false;
+
+    if (source->Class != ITEM_CLASS_WEAPON)
+        return true;
+
+    std::uint32_t const weaponSkill = source->GetSkill();
+    return weaponSkill == 0 || player->GetSkillValue(weaponSkill) != 0;
+}
+
 bool Transmogrification::IsSubclassMismatchAllowed(Player *player, const ItemTemplate *source, const ItemTemplate *target) const
 {
     if (IsAllowed(source->ItemId)) return true;
@@ -1014,9 +1055,11 @@ bool Transmogrification::IsSubclassMismatchAllowed(Player *player, const ItemTem
                 case ITEM_SUBCLASS_WEAPON_AXE:
                 case ITEM_SUBCLASS_WEAPON_SWORD:
                 case ITEM_SUBCLASS_WEAPON_MACE:
+                case ITEM_SUBCLASS_WEAPON_FIST:
                     if (sourceSub == ITEM_SUBCLASS_WEAPON_AXE   ||
                         sourceSub == ITEM_SUBCLASS_WEAPON_SWORD ||
-                        sourceSub == ITEM_SUBCLASS_WEAPON_MACE   )
+                        sourceSub == ITEM_SUBCLASS_WEAPON_MACE   ||
+                        sourceSub == ITEM_SUBCLASS_WEAPON_FIST   )
                         return true;
                     break;
                 case ITEM_SUBCLASS_WEAPON_AXE2:
@@ -1463,7 +1506,7 @@ void Transmogrification::LoadConfig(bool reload)
     CollectedMixedArmorPolicy = ParseCollectedMixedArmor(
         sConfigMgr->GetOption<std::string>("SoloCollections.Transmog.MixedArmor", "any"));
     CollectedMixedWeaponPolicy = ParseCollectedMixedWeapons(
-        sConfigMgr->GetOption<std::string>("SoloCollections.Transmog.MixedWeapons", "any"));
+        sConfigMgr->GetOption<std::string>("SoloCollections.Transmog.MixedWeapons", "family"));
     AllowMixedOffhandArmorTypes = sConfigMgr->GetOption<bool>("Transmogrification.AllowMixedOffhandArmorTypes", false);
     AllowMixedWeaponHandedness = sConfigMgr->GetOption<bool>("Transmogrification.AllowMixedWeaponHandedness", false);
     AllowFishingPoles = sConfigMgr->GetOption<bool>("Transmogrification.AllowFishingPoles", false);

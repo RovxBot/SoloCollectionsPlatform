@@ -340,15 +340,19 @@ public:
         ApplyCompletion completion);
     bool CanTransmogrifyItemWithItem(Player* player, ItemTemplate const* destination, ItemTemplate const* source) const;
     // Collected wardrobe apply: keep slot/armor/weapon family checks, but do not
-    // re-apply the source item's class/race/skill gates, and do not run NPC
+    // re-apply source armor-skill/race gates or NPC
     // SuitableForTransmogrification on the equipped target. The account already
     // owns the appearance; the player is already wearing the destination item.
+    // Source AllowableClass and weapon proficiency are still retained for the
+    // class-restricted and weapon-use boundaries that Retail preserves.
     // Cloth/leather/mail/plate subclass mixing follows
     // SoloCollections.Transmog.MixedArmor (same/lower/any), not the NPC
     // Transmogrification.AllowMixedArmorTypes flag. Weapon subclass mixing
     // follows SoloCollections.Transmog.MixedWeapons (same/family/any); even
     // with `any`, a two-handed visual is restricted to a two-handed target.
     bool CanApplyCollectedVisual(Player* player, ItemTemplate const* destination, ItemTemplate const* source) const;
+    bool IsCollectedVisualSourceClassAllowed(Player* player, ItemTemplate const* source) const;
+    bool IsCollectedVisualSourceWeaponSkillAllowed(Player* player, ItemTemplate const* source) const;
     bool SuitableForTransmogrification(Player* player, ItemTemplate const* proto) const;
     bool SuitableForTransmogrification(ObjectGuid guid, ItemTemplate const* proto) const;
     bool IsItemTransmogrifiable(ItemTemplate const* proto, ObjectGuid const &playerGuid) const;

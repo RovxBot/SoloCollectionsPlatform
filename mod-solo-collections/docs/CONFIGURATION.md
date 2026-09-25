@@ -40,8 +40,9 @@ legacy keys; do not restore them as the wardrobe price.
 `SoloCollections.Transmog.MixedArmor` only affects collected wardrobe apply
 (`CanApplyCollectedVisual`). It does not change NPC transmog. That path does
 not run NPC `SuitableForTransmogrification` on the equipped target, so wearing
-an armor type without the matching skill cannot block a collected visual.
-Values are case-insensitive; anything else fails closed to `same`.
+an armor type without the matching skill cannot block a collected visual. The
+source's `AllowableClass` still applies, preserving class-restricted appearances
+such as tier. Values are case-insensitive; anything else fails closed to `same`.
 
 ```ini
 # same  = cloth/leather/mail/plate must match
@@ -58,22 +59,31 @@ Bow, gun, and crossbow stay isolated from melee even when the value is `any`.
 Wand and thrown are not in that isolation set. A two-handed appearance may
 only apply to a two-handed target, regardless of this setting or the legacy
 NPC weapon-mixing settings. NPC transmog still uses
-`Transmogrification.AllowMixedWeaponTypes` (distributed default STRICT).
+`Transmogrification.AllowMixedWeaponTypes` (distributed default `MODERN`, or
+`1`).
 Values are case-insensitive; anything else fails closed to `same`.
 
 ```ini
 # same   = weapon subclass must match
-# family = 1H axe/sword/mace; 2H axe/sword/mace/staff/polearm
-#          (dagger/fist/wand/thrown still need an exact match)
+# family = retail-compatible weapon families: 1H axe/sword/mace/fist;
+#          2H axe/sword/mace/staff/polearm; bow/gun/crossbow
+#          (the character must wield the source; dagger/wand/thrown/shield/
+#           held-item/fishing-pole remain distinct)
 # any    = any eligible subtype within its weapon group; a two-handed appearance
 #          only applies to a two-handed weapon. Main-hand, off-hand, and generic
 #          one-hand weapons may mix. Bow/gun/crossbow remain isolated.
 # Invalid values fail closed to same.
-SoloCollections.Transmog.MixedWeapons = any
+SoloCollections.Transmog.MixedWeapons = family
 ```
 
-NPC vendor mixing still uses `Transmogrification.AllowMixedArmorTypes` and
-`Transmogrification.AllowLowerTiers` (distributed default off).
+NPC vendor mixing still uses `Transmogrification.AllowMixedArmorTypes`,
+`Transmogrification.AllowMixedWeaponTypes`, and
+`Transmogrification.AllowMixedWeaponHandedness`. The distributed policy enables
+cross-tier armor plus the module's `MODERN` weapon groups: 1H axe/sword/mace/
+fist; 2H axe/sword/mace/staff/polearm; and bow/gun/crossbow. It preserves
+weapon proficiency plus main-hand/off-hand, ranged, and two-hand restrictions
+rather than enabling the module's fully unrestricted weapon mode. The template also enables poor and
+common-quality appearances, matching Retail's 10.0.5 quality expansion.
 
 Type 18 (`character-applied`) and type 19 (`account-outfit`) are internal
 projections. They are advertised only to AddOns whose HELLO `clientBuild`
@@ -129,7 +139,7 @@ Launch-audit decisions for the sync gaps found against LegionCore:
 `SoloCollections.Transmog.MixedArmor`（`same` / `lower` / `any`，默认 `any`，
 无效值按 `same`；`any` 时无甲种 MISC 可与同 `InventoryType` 的有甲种互幻），
 跨武器读 `SoloCollections.Transmog.MixedWeapons`（`same` / `family` / `any`，
-默认 `any`；双手外观只能幻化到双手武器，主手/副手/通用单手武器可互幻；弓/枪/弩与近战始终隔离，魔杖/投掷不在这组隔离里），不改 NPC 幻化台的
+默认 `family`；family 为单手斧/剑/锤/拳套、双手斧/剑/锤/法杖/长柄和弓/枪/弩；角色必须能使用来源武器；匕首、魔杖、投掷、盾牌、副手物品和鱼竿保持独立；双手外观只能幻化到双手武器），不改 NPC 幻化台的
 `AllowMixedArmorTypes` / `AllowMixedWeaponTypes`。type 18/19
 只对 HELLO `clientBuild` 带 `-w1` 的插件宣告；必须先部署模块再部署新 AddOn。
 外观写在装备实例上，换装不自动套到新物品。

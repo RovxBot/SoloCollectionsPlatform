@@ -518,10 +518,14 @@ end
 function UI.GetTransmogArmorFilterOptions()
     local options = {}
     local source = SC.EzWardrobe and SC.EzWardrobe.DataProvider and SC.EzWardrobe.DataProvider.ARMOR_OPTIONS or {}
+    local hasAll = false
     for _, option in ipairs(source) do
         options[#options + 1] = option
+        hasAll = hasAll or option.key == "ALL"
     end
-    options[#options + 1] = { key = "ALL", label = L("All", "全部") }
+    if not hasAll then
+        options[#options + 1] = { key = "ALL", label = L("All", "全部") }
+    end
     return options
 end
 

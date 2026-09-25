@@ -24,20 +24,20 @@ local STATUS_TEXT = {
 }
 
 local STATUS_REASON_TEXT = {
-    CLASS_RESTRICTED = "当前装备与此外观不兼容",
-    RACE_RESTRICTED = "当前种族不能使用此外观",
-    SKILL_REQUIRED = "当前角色缺少使用此外观所需的技能",
-    WEAPON_TYPE = "武器类型不兼容",
-    ARMOR_TYPE = "护甲类型不兼容",
-    INVALID_TARGET_SLOT = "该装备栏里没有装备物品。",
-    UNKNOWN_IDENTITY = "未知外观。",
-    NOT_OWNED = "此外观尚未收藏",
-    COST_CHANGED = "费用已变化，请重新确认后再应用",
-    INSUFFICIENT_FUNDS = "金币不足",
-    NOTHING_EQUIPPED = "没有可写入的装备",
-    UNSUPPORTED = "当前版本不支持这项幻化",
-    INVALID_REQUEST = "请求无效",
-    REQUEST_NOT_SENT = "请求未能发出",
+    CLASS_RESTRICTED = L("This character cannot use that appearance.", "当前装备与此外观不兼容"),
+    RACE_RESTRICTED = L("This race cannot use that appearance.", "当前种族不能使用此外观"),
+    SKILL_REQUIRED = L("This character lacks the required weapon proficiency.", "当前角色缺少使用此外观所需的技能"),
+    WEAPON_TYPE = L("The weapon type is incompatible.", "武器类型不兼容"),
+    ARMOR_TYPE = L("The armor type is incompatible.", "护甲类型不兼容"),
+    INVALID_TARGET_SLOT = L("There is no item equipped in this slot.", "该装备栏里没有装备物品。"),
+    UNKNOWN_IDENTITY = L("Unknown appearance.", "未知外观。"),
+    NOT_OWNED = L("You have not collected that appearance.", "此外观尚未收藏"),
+    COST_CHANGED = L("The cost changed. Confirm again before applying.", "费用已变化，请重新确认后再应用"),
+    INSUFFICIENT_FUNDS = L("Not enough gold.", "金币不足"),
+    NOTHING_EQUIPPED = L("There is no equipped item to update.", "没有可写入的装备"),
+    UNSUPPORTED = L("This transmogrification is not supported by this version.", "当前版本不支持这项幻化"),
+    INVALID_REQUEST = L("The request is invalid.", "请求无效"),
+    REQUEST_NOT_SENT = L("The request could not be sent.", "请求未能发出"),
 }
 
 local function pendingApplyCount(state)

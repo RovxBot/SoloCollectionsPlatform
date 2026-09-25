@@ -253,7 +253,7 @@ local function addSetSourceTooltip(record)
         end
     end
     if label then
-        GameTooltip:AddLine("来源：" .. label, 0.94, 0.82, 0.58, true)
+        GameTooltip:AddLine(L("Source: ", "来源：") .. label, 0.94, 0.82, 0.58, true)
     end
 end
 

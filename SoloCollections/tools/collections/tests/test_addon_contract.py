@@ -177,6 +177,8 @@ class AddonContractTests(unittest.TestCase):
         identity = read_text(ADDON / "Core" / "IdentityRegistry.lua")
         templates = read_text(ADDON / "UI" / "Templates.lua")
         window = read_text(ADDON / "UI" / "WardrobeLab" / "Window.lua")
+        controller = read_text(ADDON / "UI" / "WardrobeLab" / "Controller.lua")
+        sources = read_text(ADDON / "UI" / "WardrobeLab" / "Sources.lua")
         state = read_text(ADDON / "UI" / "WardrobeLab" / "State.lua")
 
         self.assertIn('return locale == "zhCN" or locale == "zhTW"', base)
@@ -184,7 +186,13 @@ class AddonContractTests(unittest.TestCase):
         self.assertIn('name = localizedName(names, collection.collectionKey)', catalog)
         self.assertIn('label = L(name.enUS, name.zhCN)', identity)
         self.assertIn('L("Search", "搜索")', templates)
+        self.assertIn('L("Collected", "已收集")', templates)
+        self.assertIn('L("Not Collected", "未收集")', templates)
+        self.assertIn('L("Select All", "全部勾选")', templates)
+        self.assertIn('L("Clear All", "全部取消")', templates)
         self.assertIn('L("Transmogrify", "幻化")', window)
+        self.assertIn('L("The weapon type is incompatible.", "武器类型不兼容")', controller)
+        self.assertIn('L("Source: ", "来源：")', sources)
         self.assertIn('label = L("Head", "头部")', state)
 
     def test_native_class_mounts_remain_visible_in_dragonui(self):
@@ -236,6 +244,8 @@ class AddonContractTests(unittest.TestCase):
     def test_wardrobe_defaults_to_all_armor_and_weapon_subtypes(self):
         bootstrap = read_text(ADDON / "Core" / "Bootstrap.lua")
         catalog = read_text(ADDON / "Core" / "Catalog.lua")
+        provider = read_text(ADDON / "UI" / "EzWardrobe" / "DataProvider.lua")
+        window = read_text(ADDON / "UI" / "WardrobeLab" / "Window.lua")
 
         self.assertIn("schemaVersion = 13", bootstrap)
         self.assertIn('armorType = "ALL"', bootstrap)
@@ -245,6 +255,9 @@ class AddonContractTests(unittest.TestCase):
         self.assertIn('db.filters.armorType = "ALL"', bootstrap)
         self.assertIn('db.filters.weaponType = "ALL"', bootstrap)
         self.assertIn('{ key = "ALL", label = L("All", "全部") }', catalog)
+        self.assertIn('{ key = "ALL", label = L("All", "全部") }', provider)
+        self.assertIn("local hasAll = false", window)
+        self.assertIn("if not hasAll then", window)
         self.assertIn('if weaponType == "ALL" then', catalog)
 
     def test_offhand_weapon_query_includes_one_hand_weapons_but_not_shields(self):

@@ -127,7 +127,7 @@ directory and use this production ownership mode:
 SoloCollections.Backend = Cpp
 SoloCollections.Preview.Enabled = 1
 SoloCollections.Transmog.MixedArmor = any
-SoloCollections.Transmog.MixedWeapons = any
+SoloCollections.Transmog.MixedWeapons = family
 ```
 
 See the module repository's

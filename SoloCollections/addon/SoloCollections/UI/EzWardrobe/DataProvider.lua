@@ -33,6 +33,7 @@ local EQUIPMENT_SLOT_BY_APPEARANCE_SLOT = {
 }
 
 DataProvider.ARMOR_OPTIONS = {
+    { key = "ALL", label = L("All", "全部") },
     { key = "PLATE", label = L("Plate", "板甲") },
     { key = "MAIL", label = L("Mail", "锁甲") },
     { key = "LEATHER", label = L("Leather", "皮甲") },

@@ -151,14 +151,15 @@ Wardrobe `Y`/`U` now emit `event=wardrobe_quote` and `event=wardrobe_intent` on
 `Y` body also sets `kind=Y` on `event=protocol_reject`. Use those lines to tell
 a missing client send from a server-side quote/apply result.
 
-Collected wardrobe apply uses `CanApplyCollectedVisual` so an owned appearance
-is not blocked by the source item's `AllowableClass` or by NPC armor-skill
-checks on the equipped target. Cloth/leather/mail/plate mixing on that path
+Collected wardrobe apply uses `CanApplyCollectedVisual`. It preserves the
+source item's `AllowableClass` for class-restricted appearances, but does not
+apply NPC armor-skill checks to the equipped target. Cloth/leather/mail/plate mixing on that path
 follows `SoloCollections.Transmog.MixedArmor` (`same` / `lower` / `any`,
 default `any`, invalid values fail closed to `same`). Weapon subclass mixing
 follows `SoloCollections.Transmog.MixedWeapons` (`same` / `family` / `any`,
-default `any`); bow/gun/crossbow stay isolated from melee. Wand and thrown
-are not in that isolation set. MISC armor can mix with a
+default `family`): 1H axe/sword/mace/fist; 2H axe/sword/mace/staff/polearm;
+and bow/gun/crossbow. Dagger, wand, thrown, shield, held-item, and fishing-pole
+appearances stay distinct, and source weapon proficiency remains required. MISC armor can mix with a
 tiered appearance of the same inventory type when MixedArmor is `any`. NPC
 transmog still uses `Transmogrification.AllowMixedArmorTypes` and
 `Transmogrification.AllowMixedWeaponTypes`. Shirt and tabard wardrobe cards

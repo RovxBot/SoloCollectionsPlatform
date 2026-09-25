@@ -47,7 +47,7 @@ SoloCollections.Preview.Enabled = 1
 #        Description: Wardrobe collected-apply only (CanApplyCollectedVisual, Y QUOTE/APPLY).
 #                     Does not change NPC vendor transmog. NPC still uses
 #                     Transmogrification.AllowMixedArmorTypes and AllowLowerTiers
-#                     (distributed defaults off).
+#                     (the distributed policy enables cross-tier armor).
 #                     Does not run NPC armor-skill or AllowableClass gates on the
 #                     equipped target; the player is already wearing that item.
 #                     Values are case-insensitive. Any other string fails closed to same.
@@ -68,7 +68,7 @@ SoloCollections.Transmog.MixedArmor = any
 
 #    SoloCollections.Transmog.MixedWeapons
 #        Description: Wardrobe collected-apply only. Does not change NPC vendor
-#                     transmog (Transmogrification.AllowMixedWeaponTypes, default STRICT).
+#                     transmog (Transmogrification.AllowMixedWeaponTypes, default MODERN).
 #                     Values are case-insensitive. Any other string fails closed to same.
 #
 #                     Isolation this key cannot lift:
@@ -77,18 +77,19 @@ SoloCollections.Transmog.MixedArmor = any
 #                     Wand and thrown are not in that isolation set.
 #
 #                     same   - weapon subclass must match (sword onto sword, and so on).
-#                     family - 1H axe / sword / mace may mix with each other;
-#                              2H axe / sword / mace / staff / polearm may mix with each other.
-#                              Dagger, fist, wand, thrown, and other subclasses still need
-#                              an exact subclass match.
+#                     family - retail-compatible weapon families: 1H axe / sword /
+#                              mace / fist; 2H axe / sword / mace / staff / polearm;
+#                              and bow / gun / crossbow. The character must be able to
+#                              wield the source weapon. Dagger, wand, thrown, shield,
+#                              held-item, and fishing-pole appearances stay distinct.
 #                     any    - any eligible weapon subtype within its weapon group.
 #                              Two-handed appearances only apply to two-handed weapons;
 #                              main-hand, off-hand, and generic one-hand weapons may mix.
 #                              The bow / gun / crossbow isolation above still applies.
 #
-#        Default:     any
+#        Default:     family
 #
-SoloCollections.Transmog.MixedWeapons = any
+SoloCollections.Transmog.MixedWeapons = family
 
 #
 ###################################################################################################
@@ -328,8 +329,8 @@ Transmogrification.TokenAmount = 1
 #        Default:    0
 
 
-Transmogrification.AllowPoor = 0
-Transmogrification.AllowCommon = 0
+Transmogrification.AllowPoor = 1
+Transmogrification.AllowCommon = 1
 Transmogrification.AllowUncommon = 1
 Transmogrification.AllowRare = 1
 Transmogrification.AllowEpic = 1
@@ -338,10 +339,10 @@ Transmogrification.AllowArtifact = 0
 Transmogrification.AllowHeirloom = 1
 Transmogrification.AllowTradeable = 0
 
-Transmogrification.AllowMixedArmorTypes = 0
+Transmogrification.AllowMixedArmorTypes = 1
 Transmogrification.AllowLowerTiers = 0
 Transmogrification.AllowMixedOffhandArmorTypes = 0
-Transmogrification.AllowMixedWeaponTypes = 0
+Transmogrification.AllowMixedWeaponTypes = 1
 Transmogrification.AllowMixedWeaponHandedness = 0
 Transmogrification.AllowFishingPoles = 0
 

@@ -897,8 +897,8 @@ function UI.AddCollectedStateMenuButtons(level, onChanged)
     SC.db.filters = SC.db.filters or {}
     local filters = SC.db.filters
     local options = {
-        { key = "collected", label = "已收集" },
-        { key = "uncollected", label = "未收集" },
+        { key = "collected", label = L("Collected", "已收集") },
+        { key = "uncollected", label = L("Not Collected", "未收集") },
     }
     for _, option in ipairs(options) do
         local key = option.key
@@ -933,7 +933,7 @@ function UI.AddAppearanceSourceMenuButtons(level, onChanged)
     local all = UIDropDownMenu_CreateInfo()
     all.notCheckable = true
     all.keepShownOnClick = true
-    all.text = "全部勾选"
+    all.text = L("Select All", "全部勾选")
     all.func = function()
         local filters = sourceFilters()
         if filters then filters.hiddenSources = {} end
@@ -945,7 +945,7 @@ function UI.AddAppearanceSourceMenuButtons(level, onChanged)
     local none = UIDropDownMenu_CreateInfo()
     none.notCheckable = true
     none.keepShownOnClick = true
-    none.text = "全部取消"
+    none.text = L("Clear All", "全部取消")
     none.func = function()
         local filters = sourceFilters()
         if filters then
