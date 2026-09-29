@@ -129,6 +129,10 @@ SoloCollections/addon/SoloCollections
 <WoW>/Interface/AddOns/SoloCollections/SoloCollections.toc
 ```
 
+DragonUI / DragonUI_NewEra 是可选的界面增强。若安装的 NewEra 版本未提供
+SoloCollections 所需的公共接口，收藏窗口和幻化小地图按钮会自动使用内置界面，
+而不会因此被禁用。
+
 ### 4. 登录检查
 
 启动服务端后应看到 `event=startup_versions` 和

@@ -152,6 +152,16 @@ class AddonContractTests(unittest.TestCase):
         self.assertIn('transmogMinimap = { angle = 225 }', bootstrap)
         self.assertIn('db.transmogLauncher = nil', bootstrap)
 
+    def test_native_ui_remains_available_without_the_newera_public_api(self):
+        platform = read_text(ADDON / "Core" / "UIPlatform.lua")
+        toc = read_text(ADDON / "SoloCollections.toc")
+        can_create_ui = lua_function_region(platform, "Platform:CanCreateUI")
+        self.assertIn("native SoloCollections shell", can_create_ui)
+        self.assertIn("return true", can_create_ui)
+        self.assertNotIn("self:ShowError", can_create_ui)
+        self.assertNotIn("## Dependencies: DragonUI_NewEra", toc)
+        self.assertIn("## OptionalDeps: DragonUI, DragonUI_NewEra,", toc)
+
     def test_live_dragonui_collections_bridge_is_loaded_as_an_optional_adapter(self):
         toc = read_text(ADDON / "SoloCollections.toc")
         bridge = read_text(ADDON / "UI" / "DragonUI" / "CollectionsBridge.lua")

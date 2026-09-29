@@ -64,9 +64,12 @@ function Platform:IsReady()
 end
 
 function Platform:CanCreateUI()
-    if self:IsReady() then return true end
-    self:ShowError(self.reason)
-    return false
+    -- The native SoloCollections shell does not consume the NewEra public API.
+    -- Keep it available when a compatible public surface is absent so an
+    -- upstream NewEra update cannot remove every entry point to the journal
+    -- and wardrobe.  IsDragonUIShell() remains false in that case, which
+    -- keeps every NewEra-specific integration path inactive.
+    return true
 end
 
 function Platform:GetPublic()
