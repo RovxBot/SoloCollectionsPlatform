@@ -70,7 +70,12 @@ local function mode(kind)
     local experimental = SC.db and SC.db.experimental
     local value = experimental and experimental.modelProviderByKind and experimental.modelProviderByKind[kind]
         or (experimental and experimental.modelProvider)
-    return value == "legacy" and "legacy" or "newera"
+    if value == "legacy" then return "legacy" end
+    local public = SC.UIPlatform and SC.UIPlatform:GetPublic()
+    if not (public and public.Model and type(public.Model.CreatePresenter) == "function") then
+        return "legacy"
+    end
+    return "newera"
 end
 
 -- 3.3.5a interpolates M2 animation tracks after the current Lua call returns.

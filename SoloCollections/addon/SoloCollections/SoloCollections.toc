@@ -3,7 +3,8 @@
 ## Notes: Server-authoritative collection journal for WoW 3.3.5a.
 ## Author: SoloCollections contributors
 ## Version: 0.2.0
-## OptionalDeps: DragonUI, DragonUI_NewEra, SoloCollections_EzUI, SoloCollections_RetailUI
+## Dependencies: DragonUI_NewEra
+## OptionalDeps: DragonUI, SoloCollections_EzUI, SoloCollections_RetailUI
 ## X-SoloCollections-BuildChannel: stable
 ## SavedVariables: SoloCollectionsDB
 

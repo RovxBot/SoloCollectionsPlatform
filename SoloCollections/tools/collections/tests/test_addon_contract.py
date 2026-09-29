@@ -152,15 +152,25 @@ class AddonContractTests(unittest.TestCase):
         self.assertIn('transmogMinimap = { angle = 225 }', bootstrap)
         self.assertIn('db.transmogLauncher = nil', bootstrap)
 
-    def test_native_ui_remains_available_without_the_newera_public_api(self):
+    def test_newera_01_adapter_keeps_newera_as_a_required_platform(self):
         platform = read_text(ADDON / "Core" / "UIPlatform.lua")
         toc = read_text(ADDON / "SoloCollections.toc")
-        can_create_ui = lua_function_region(platform, "Platform:CanCreateUI")
-        self.assertIn("native SoloCollections shell", can_create_ui)
-        self.assertIn("return true", can_create_ui)
-        self.assertNotIn("self:ShowError", can_create_ui)
-        self.assertNotIn("## Dependencies: DragonUI_NewEra", toc)
-        self.assertIn("## OptionalDeps: DragonUI, DragonUI_NewEra,", toc)
+        self.assertIn("buildCurrentNewEraAdapter", platform)
+        for token in (
+            "newEra.chrome.Apply",
+            "newEra.FrameUtil.PersistWindowPosition",
+            "newEra.RegisterPanel",
+            "newEra.tabs.SizeAndAnchorTabs",
+            'adapter = "newera-0.1"',
+        ):
+            self.assertIn(token, platform)
+        self.assertIn("## Dependencies: DragonUI_NewEra", toc)
+        self.assertNotIn("## OptionalDeps: DragonUI, DragonUI_NewEra,", toc)
+
+    def test_model_presenters_fall_back_when_newera_has_no_presenter_api(self):
+        provider = read_text(ADDON / "Core" / "ModelProvider.lua")
+        self.assertIn('type(public.Model.CreatePresenter) == "function"', provider)
+        self.assertIn('if value == "legacy" then return "legacy" end', provider)
 
     def test_live_dragonui_collections_bridge_is_loaded_as_an_optional_adapter(self):
         toc = read_text(ADDON / "SoloCollections.toc")
