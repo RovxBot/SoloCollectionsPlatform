@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "generatedAddon": "SoloCollections_EzUI",
+  "sourceName": "ezCollections",
+  "sourceVersion": "2.2",
+  "sourceAuthor": "ZEUStiger",
+  "sourceTreeHash": "6ba2a6f12f47518f3e3794a13979d632fdb2348af73ce4515423cd9812002d21",
+  "assetTreeHash": "2d8d816ae57f7e5e3920db2e03762cb7ebe88f684857a8492ab22b1f74029779",
+  "hashAlgorithm": "sha256(sorted relative-path + NUL + lowercase file-sha256 + LF)",
+  "assetScope": "all .blp, .tga, and .wav files in the authorized local snapshot",
+  "assetFileCount": 145,
+  "sourcePathRecorded": false,
+  "importedCode": false,
+  "mountDescriptionSource": "not supplied",
+  "mountDescriptionSha256": null,
+  "excludedRuntime": [
+    "C_Transmog*",
+    "ezCollections server Lua",
+    "ezCollections message protocol"
+  ],
+  "publicReleaseState": "blocked pending explicit license and provenance review"
+}

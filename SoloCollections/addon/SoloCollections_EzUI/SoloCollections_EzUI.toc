@@ -1,0 +1,10 @@
+## Interface: 30300
+## Title: SoloCollections ezCollections UI Assets (Local)
+## Notes: Generated local-only visual assets for SoloCollections.
+## Author: Local integration generator; source visual assets by ZEUStiger
+## Version: 2.2-local-ui-1
+## X-SoloCollections-EzUI-Schema: 1
+## X-SoloCollections-EzUI-AssetHash: 2d8d816ae57f7e5e3920db2e03762cb7ebe88f684857a8492ab22b1f74029779
+
+Assets.lua
+
