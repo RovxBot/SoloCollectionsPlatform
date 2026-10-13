@@ -327,7 +327,7 @@ class BridgeContractTests(unittest.TestCase):
             '"BRIDGE_UNAVAILABLE"',
             "requestSerial = requestSerial + 1",
             "sc2PendingActions[requestId] = {",
-            "deadline = GetTime() + requestTimeout",
+            "startedAt = GetTime()",
             "callback = callback",
             '"Q", CS.sessionNonce',
             '"WHISPER"',
@@ -393,7 +393,7 @@ class BridgeContractTests(unittest.TestCase):
 
     def test_pet_filter_schema_repair_preserves_nested_filter_table(self):
         bootstrap = read_text(ADDON / "Core" / "Bootstrap.lua")
-        self.assertIn("schemaVersion = 7", bootstrap)
+        self.assertIn("schemaVersion = 13", bootstrap)
         self.assertIn('repairScalar(db.filters, "pets", "table", {})', bootstrap)
         self.assertIn('repairScalar(db.filters.pets, "hiddenSources", "table", {})', bootstrap)
         self.assertNotIn("db.filters = DEFAULTS.filters", bootstrap)
@@ -611,6 +611,7 @@ class BridgeContractTests(unittest.TestCase):
             )
         self.assertEqual(expected, server_pet_allowlist(text))
 
+    @unittest.skipUnless((ADDON / "Data/Toys.lua").exists(), "Toy data is deferred from the stable addon")
     def test_server_toy_id_allowlist_matches_the_fixed_toy_catalog(self):
         text = read_text(SERVER_LUA)
         toys = read_text(ADDON / "Data" / "Toys.lua")

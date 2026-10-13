@@ -27,6 +27,9 @@ class WardrobeBehaviorTests(unittest.TestCase):
     def test_native_locale_names_and_item_id_search(self):
         self.run_harness("wardrobe_catalog_harness.lua")
 
+    def test_native_renderer_lifecycle_and_stale_work(self):
+        self.run_harness("wardrobe_renderer_harness.lua")
+
 
 if __name__ == "__main__":
     unittest.main()

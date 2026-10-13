@@ -106,6 +106,11 @@ checks, builds, server runtime, client runtime, and visual acceptance.
 
 ## Common commands
 
+For the active wardrobe polish checks, run `python tools/collections/check_wardrobe.py`.
+This checks addon Lua syntax and the active journal/SC2/renderer suites without
+accessing a game installation. See [the validation matrix](evidence/2026-10-13-wardrobe-polish-validation.md)
+for runtime and visual checks; these cannot be inferred from portable tests.
+
 ```powershell
 # Python dependencies
 python -m pip install -r .\client-extension\SoloCam\requirements-dev.txt

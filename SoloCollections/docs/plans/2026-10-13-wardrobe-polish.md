@@ -34,7 +34,10 @@ or switch automatically. Each implementation is a separate commit on `main`.
    and refreshes previews when a preset changes. A visible Save/Update button
    complements the management dropdown. Saving captures confirmed appearances
    and hidden slots; loading only creates a draft and never sends a paid apply.
-8. Release-check maintenance and documented real-client acceptance matrix.
+8. Release-check maintenance: an active wardrobe gate, explicit deferred-toy
+   skips, dependency-based TOC checks, and a native renderer behavior harness
+   replacing retired rendering assertions. The validation evidence document
+   records the real-client matrix and remaining data/feature work.
 
 Full localized catalogue/source names require reviewed locale inputs. Camera
 calibration requires real-client screenshots; source changes cannot establish

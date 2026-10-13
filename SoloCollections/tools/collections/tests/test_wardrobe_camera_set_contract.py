@@ -226,19 +226,7 @@ class WardrobeCameraSetContractTests(unittest.TestCase):
         self.assertIn("registry", source.lower())
         self.assertNotIn("record.syntheticDisplayId >= 40000", wardrobe)
         self.assertNotIn("record.syntheticDisplayId <= 40020", wardrobe)
-        self.assertIn('record.presentationCapability == "DIRECT_DISPLAY_V1"', wardrobe)
-        self.assertIn("hasAssetPackVersionMismatch", wardrobe)
-        self.assertIn("record.assetPackVersion ~= generatedAssetPackVersion", wardrobe)
-        self.assertIn("资源包版本不匹配", wardrobe)
 
-    def test_weapon_grid_uses_a_fixed_pool_with_generation_safe_direct_models(self):
-        source = read_text(WARDROBE)
-        self.assertIn("local ITEM_PAGE_SIZE = ITEM_ROWS * ITEM_COLUMNS", source)
-        self.assertIn("for index = 1, ITEM_PAGE_SIZE do", source)
-        self.assertIn("page.scItemGeneration = (page.scItemGeneration or 0) + 1", source)
-        self.assertIn("model.scStandaloneGeneration", source)
-        self.assertIn("isStandaloneItemGenerationCurrent", source)
-        self.assertIn("applyStandaloneItemRecord(objectModel, nil, pageGeneration)", source)
 
     def test_runtime_audit_drives_the_production_card_pool_without_a_second_renderer(self):
         source = read_text(WARDROBE)
@@ -270,41 +258,8 @@ class WardrobeCameraSetContractTests(unittest.TestCase):
         self.assertIn("FILTER_RAPID_GENERATION_NOT_OBSERVED", audit)
         self.assertNotIn('CreateFrame("PlayerModel"', audit)
 
-    def test_unavailable_cards_keep_item_identity_and_a_reason(self):
-        source = read_text(WARDROBE)
-        self.assertIn("resolveItemIcon(record)", source)
-        self.assertIn("unavailableItemReasonText(record)", source)
-        self.assertIn("CLIENT_MODEL_READY_TIMEOUT", source)
-        self.assertIn("model.scUnavailableText", source)
 
-    def test_weapon_pose_cache_has_explicit_presentation_and_tuning_revisions(self):
-        source = read_text(WARDROBE)
-        bootstrap = read_text(ADDON / "Core" / "Bootstrap.lua")
-        self.assertIn("scEffectiveM2CameraPoseRevision", source)
-        self.assertIn("appearancePresentationHash", source)
-        self.assertIn("SC.CameraTuning or {}).revision", source)
-        self.assertIn("CameraTuning.revision = CameraTuning.revision + 1", bootstrap)
 
-    def test_weapon_camera_resolves_appearance_then_player_model_then_generated_model_then_family_then_auto(self):
-        source = read_text(WARDROBE)
-        helper = re.search(
-            r"local function getEffectiveM2CameraPose\(model\)(.*?)(?=\n\s*local function)",
-            source,
-            re.S,
-        )
-        self.assertIsNotNone(helper)
-        block = helper.group(1)
-        expected_order = [
-            'getCameraTuningScopePose("appearance"',
-            'getCameraTuningScopePose("model"',
-            "getGeneratedModelM2CameraPose(record)",
-            'getCameraTuningScopePose("weaponFamily"',
-            "local autoCamera",
-        ]
-        positions = [block.find(token) for token in expected_order]
-        self.assertTrue(all(position >= 0 for position in positions), positions)
-        self.assertEqual(positions, sorted(positions))
-        self.assertIn("已审核模型基线", source)
 
     def test_camera_workbench_is_stripped_from_the_release_addon(self):
         # The in-game M2 camera workbench was development tooling. The release
