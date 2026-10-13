@@ -137,8 +137,9 @@ SoloCollections.Transmog.MixedWeapons = family
 #        Default:     1
 #
 #    Transmogrification.TrackUnusableItems
-#        Description: If enabled, appearances are collected even for items that are not suitable for transmogrification.
-#                     This allows these appearances to be used later if the configuration is changed.
+#        Description: Retained for legacy configuration compatibility. Cpp/SC2
+#                     collects acquired canonical equipment appearances regardless
+#                     of this setting or whether the current character can equip them.
 #        Default:     1
 #
 #    Transmogrification.RetroActiveAppearances

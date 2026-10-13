@@ -85,7 +85,6 @@ class AppearanceServiceContractTests(unittest.TestCase):
         self.assertIn("CheckMigrationMarker", service)
         self.assertIn("CompleteMigrationMarker", service)
         self.assertIn("GetAccountCollectionService().TryUnlock", service)
-        self.assertIn("event=migration_reconcile", service)
         self.assertIn("ExpectedCanonicalGroups", service)
         self.assertIn("LegacyAppearance = 2", store_header)
         self.assertIn("SELECT 1 AS row_kind, item_template_id AS value FROM custom_unlocked_appearances", store)
@@ -117,21 +116,23 @@ class AppearanceServiceContractTests(unittest.TestCase):
             "Equipment", "Loot", "Craft", "QuestReward", "InventoryStore", "Vendor", "GroupRoll",
         ):
             self.assertIn(f"AppearanceUnlockTrigger::{trigger}", core)
-        self.assertIn("mail,", core)
-        self.assertIn("trade,", core)
-        self.assertIn("auction,", core)
-        self.assertIn("buyback,", core)
+        self.assertIn("PLAYERHOOK_ON_SAVE", core)
+        self.assertIn("PLAYERHOOK_ON_AFTER_MOVE_ITEM_FROM_INVENTORY", core)
+        self.assertIn("GetAppearanceService().ScanInventory", core)
         self.assertIn("GetAccountCollectionService().TryUnlock", service)
         self.assertIn("AdvanceQueuedUnlocks", service)
 
-    def test_binding_policy_and_low_frequency_reconcile_are_explicit(self):
+    def test_acquisition_does_not_require_binding_or_equipping_and_reconcile_is_bounded(self):
         service = (APPEARANCE / "SoloCollectionsAppearanceService.cpp").read_text(encoding="utf-8")
-        self.assertIn("ITEM_FIELD_FLAG_REFUNDABLE", service)
-        self.assertIn("ITEM_FIELD_FLAG_BOP_TRADEABLE", service)
-        self.assertIn("GetAllowTradeable", service)
-        self.assertIn("BIND_WHEN_PICKED_UP", service)
+        acquired = service.split("AppearanceService::OnItemAcquired", 1)[1].split("AppearanceService::QueueGameMasterUnlock", 1)[0]
+        for old_gate in ("IsSoulBound", "BIND_WHEN_PICKED_UP", "ITEM_FIELD_FLAG_REFUNDABLE",
+                         "GetAllowTradeable", "GetTrackUnusableItems", "SuitableForTransmogrification"):
+            self.assertNotIn(old_gate, acquired)
         self.assertIn("InventoryReconcileIntervalMs = 5000", service)
         self.assertIn("ScanHistoricalInventory", service)
+        core = (SRC / "SoloCollectionsCore.cpp").read_text()
+        self.assertIn("PLAYERHOOK_ON_SAVE", core)
+        self.assertIn("PLAYERHOOK_ON_AFTER_MOVE_ITEM_FROM_INVENTORY", core)
 
     def test_only_the_reward_actually_granted_can_unlock_and_gm_uses_unified_queue(self):
         core = (SRC / "SoloCollectionsCore.cpp").read_text(encoding="utf-8")

@@ -83,8 +83,11 @@ class TemplateSafetyContractTests(unittest.TestCase):
         item_helper = APPEARANCE_SERVICE.split("AppearanceService::OnItemAcquired", 1)[1].split(
             "AppearanceService::QueueGameMasterUnlock", 1
         )[0]
-        self.assertIn("!player || !player->GetSession() || !item", item_helper)
-        self.assertIn("if (!itemTemplate", item_helper)
+        acquisition = (ROOT / "src/Categories/Appearance/SoloCollectionsAppearanceAcquisition.h").read_text()
+        self.assertIn("FindAcquiredAppearanceSource(player, item", item_helper)
+        self.assertIn("!player || !player->GetSession() || !item", acquisition)
+        self.assertIn("!itemTemplate", acquisition)
+        self.assertIn("item->GetOwnerGUID() != player->GetGUID()", acquisition)
 
     def test_quest_unlock_uses_only_the_item_actually_granted(self):
         quest_hook = CORE.split("void OnPlayerQuestRewardItem", 1)[1].split(

@@ -88,6 +88,7 @@ public:
         std::uint32_t characterGuid = 0, std::uint32_t actorAccountId = 0, std::uint32_t actorGuid = 0);
     void QueueNewClear(AccountId accountId, CollectionId appearanceId);
     void ScanHistoricalInventory(Player* player);
+    void ScanInventory(Player* player, AppearanceUnlockTrigger trigger);
     [[nodiscard]] bool HasCollectedSource(AccountId accountId, std::uint32_t sourceItemId) const;
     [[nodiscard]] std::unordered_set<std::uint32_t> CollectedSources(AccountId accountId) const;
     [[nodiscard]] AppearanceRepositoryHealth RepositoryHealth() const;

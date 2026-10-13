@@ -107,10 +107,14 @@ authorization, not merely UI appearance.
 
 Launch-audit decisions for the sync gaps found against LegionCore:
 
-1. Refundable items: handled. `AppearanceService::OnItemAcquired` defers the
-   unlock while `ITEM_FIELD_FLAG_REFUNDABLE` (or a tradeable BoP window) is
-   set; the periodic inventory reconcile unlocks the appearance after the
-   refund window expires. No extend-on-refund clawback is needed.
+1. Acquisition collection: in C++/SC2 mode, acquiring a catalogued armor/weapon
+   item learns its appearance immediately, including unbound, refundable,
+   tradeable and currently unequippable items. The service verifies the server's
+   item owner; binding/refund/trade flags are not modified. Collection is
+   independent of `TrackUnusableItems` and `AllowTradeable`; transmog application
+   retains its own eligibility rules and gold costs. Existing inventory/bank
+   reconciliation and pre-save/outgoing-transfer hooks cover older Core storage
+   paths that do not emit the new-item receipt hook.
 2. Re-equip replay: transmog stays bound to the item instance GUID (same as
    Legion). Equipping a new item does not inherit the old visual. This is a
    deliberate product decision; the wardrobe apply tooltip in the AddOn tells

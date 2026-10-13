@@ -1,6 +1,7 @@
 #include "Categories/Appearance/SoloCollectionsAppearanceService.h"
 
 #include "Categories/Appearance/SoloCollectionsAppearanceCatalog.h"
+#include "Categories/Appearance/SoloCollectionsAppearanceAcquisition.h"
 #include "SoloCollectionsAccountService.h"
 #include "SoloCollectionsProvider.h"
 #include "Transmogrification.h"
@@ -285,21 +286,17 @@ AppearanceUnlockQueueResult AppearanceService::QueueCanonicalUnlock(AccountId ac
 AppearanceUnlockQueueResult AppearanceService::OnItemAcquired(
     Player* player, Item* item, AppearanceUnlockTrigger trigger)
 {
-    if (!player || !player->GetSession() || !item)
+    if (!sTransmogrification->GetUseCollectionSystem())
         return AppearanceUnlockQueueResult::Rejected;
-    ItemTemplate const* itemTemplate = item->GetTemplate();
-    if (!itemTemplate || (itemTemplate->Class != ITEM_CLASS_ARMOR && itemTemplate->Class != ITEM_CLASS_WEAPON))
-        return AppearanceUnlockQueueResult::Rejected;
-    if (item->HasFlag(ITEM_FIELD_FLAGS, ITEM_FIELD_FLAG_REFUNDABLE) ||
-        (item->HasFlag(ITEM_FIELD_FLAGS, ITEM_FIELD_FLAG_BOP_TRADEABLE) && !sTransmogrification->GetAllowTradeable()) ||
-        (itemTemplate->Bonding != ItemBondingType::BIND_WHEN_PICKED_UP && !item->IsSoulBound()))
-        return AppearanceUnlockQueueResult::DeferredByBindingPolicy;
-    if (!sTransmogrification->GetTrackUnusableItems() &&
-        !sTransmogrification->SuitableForTransmogrification(player, itemTemplate))
+    auto sourceItemId = FindAcquiredAppearanceSource(player, item, [](ItemTemplate const& source)
+    {
+        return source.Class == ITEM_CLASS_ARMOR || source.Class == ITEM_CLASS_WEAPON;
+    });
+    if (!sourceItemId)
         return AppearanceUnlockQueueResult::Rejected;
 
     return QueueCanonicalUnlock(AccountId(player->GetSession()->GetAccountId()),
-        player->GetGUID().GetCounter(), itemTemplate->ItemId, CollectionSourceKind::Gameplay, trigger);
+        player->GetGUID().GetCounter(), *sourceItemId, CollectionSourceKind::Gameplay, trigger);
 }
 
 AppearanceUnlockQueueResult AppearanceService::QueueGameMasterUnlock(AccountId accountId,
@@ -315,12 +312,17 @@ AppearanceUnlockQueueResult AppearanceService::QueueGameMasterUnlock(AccountId a
 
 void AppearanceService::ScanHistoricalInventory(Player* player)
 {
+    ScanInventory(player, AppearanceUnlockTrigger::HistoricalReconcile);
+}
+
+void AppearanceService::ScanInventory(Player* player, AppearanceUnlockTrigger trigger)
+{
     if (!player || !player->GetSession() || !sTransmogrification->GetUseCollectionSystem())
         return;
-    auto scan = [this, player](Item* item)
+    auto scan = [this, player, trigger](Item* item)
     {
         if (item)
-            (void)OnItemAcquired(player, item, AppearanceUnlockTrigger::HistoricalReconcile);
+            (void)OnItemAcquired(player, item, trigger);
     };
     for (std::uint8_t slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
         scan(player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot));

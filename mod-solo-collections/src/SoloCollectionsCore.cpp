@@ -449,11 +449,12 @@ class SoloCollectionsCorePlayerScript final : public PlayerScript
 {
 public:
     SoloCollectionsCorePlayerScript() : PlayerScript(
-        "SoloCollectionsCorePlayerScript", { PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_LOGOUT,
+        "SoloCollectionsCorePlayerScript", { PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_SAVE,
             PLAYERHOOK_ON_UPDATE, PLAYERHOOK_ON_LEARN_SPELL, PLAYERHOOK_ON_STORE_NEW_ITEM,
             PLAYERHOOK_ON_CREATE_ITEM, PLAYERHOOK_ON_QUEST_REWARD_ITEM,
             PLAYERHOOK_ON_AFTER_STORE_OR_EQUIP_NEW_ITEM, PLAYERHOOK_ON_EQUIP,
             PLAYERHOOK_ON_LOOT_ITEM, PLAYERHOOK_ON_GROUP_ROLL_REWARD_ITEM,
+            PLAYERHOOK_ON_AFTER_MOVE_ITEM_FROM_INVENTORY,
             PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT }) { }
 
     void OnPlayerLogin(Player* player) override
@@ -509,6 +510,19 @@ public:
             AccountSessionId(player->GetGUID().GetCounter()), MonotonicMilliseconds());
     }
 
+    void OnPlayerSave(Player* player) override
+    {
+        if (IsCppBackendOwner())
+            GetAppearanceService().ScanInventory(player, AppearanceUnlockTrigger::InventoryStore);
+    }
+
+    void OnPlayerAfterMoveItemFromInventory(Player* player, Item* item,
+        std::uint8_t /*bag*/, std::uint8_t /*slot*/, bool /*update*/) override
+    {
+        if (IsCppBackendOwner())
+            OnAppearanceItem(player, item, AppearanceUnlockTrigger::InventoryStore);
+    }
+
     void OnPlayerUpdate(Player* player, std::uint32_t diff) override
     {
         if (IsCppBackendOwner())
@@ -535,8 +549,9 @@ public:
         if (!IsCppBackendOwner())
             return;
         OnToyItem(player, item);
-        // Player::StoreNewItem is the shared convergence path for mail,
-        // trade, auction, buyback, GM delivery, and other inventory stores.
+        // New-item receipts include ordinary/master loot and GM delivery.
+        // Older cores move existing mail/trade/auction items through a separate
+        // store path; inventory/save reconciliation and outgoing transfers cover it.
         OnAppearanceItem(player, item, AppearanceUnlockTrigger::InventoryStore);
     }
 
