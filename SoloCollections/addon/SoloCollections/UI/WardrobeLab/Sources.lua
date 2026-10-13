@@ -979,6 +979,11 @@ function Lab.CreateSources(parent, state)
     applySet:SetPoint("BOTTOMRIGHT", setsView, "BOTTOMRIGHT", -10, 10)
     applySet:SetText(L("Apply Set", "应用套装"))
     applySet:SetScript("OnClick", function()
+        if state.presetRecord and not Lab.IsCollectedRecord(state.presetRecord) then
+            local ok, reason = state:LoadCollectedSet(state.presetRecord)
+            if not ok then Lab.NotifyApplyBlocked(reason) end
+            return
+        end
         if Lab.BeginApplyWithWarnings then
             Lab.BeginApplyWithWarnings(state)
         else
@@ -1171,11 +1176,22 @@ function Lab.CreateSources(parent, state)
                 selectedSetName:SetText(L("Select a set to apply it", "选择套装后可直接应用"))
             end
             local canApplySet = false
+            local partial = state.presetRecord and not Lab.IsCollectedRecord(state.presetRecord)
+            applySet:SetText(partial and L("Use Collected Pieces", "使用已收藏部件") or L("Apply Set", "应用套装"))
+            applySet:SetWidth(partial and 160 or 112)
             if state.GetSetApplyState then
                 canApplySet = state:GetSetApplyState()
             elseif state.presetRecord and state.presetRecord.collected
                 and request.status ~= "REQUESTING" then
                 canApplySet = true
+            end
+            if partial and request.status ~= "REQUESTING" then
+                for _, piece in ipairs(SC.WardrobeGoals.GetPieces(state.presetRecord)) do
+                    if piece.owned and piece.appearance and state:IsSlotOccupied(piece.slotKey) then
+                        canApplySet = true
+                        break
+                    end
+                end
             end
             if canApplySet then applySet:Enable() else applySet:Disable() end
             setProgress("SETS", filters)

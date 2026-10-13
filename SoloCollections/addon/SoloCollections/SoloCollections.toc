@@ -22,6 +22,7 @@ Data\Pets.lua
 Core\IdentityRegistry.lua
 Core\CollectionState.lua
 Core\Catalog.lua
+Core\WardrobeGoals.lua
 Core\Bridge.lua
 Core\M2Camera.lua
 Core\NativePreview.lua

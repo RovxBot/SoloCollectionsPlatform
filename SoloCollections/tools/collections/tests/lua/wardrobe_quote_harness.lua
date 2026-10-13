@@ -123,6 +123,30 @@ local lines = {}
 local tooltip = { AddLine = function(_, line) lines[#lines + 1] = line end, Show = function() end }
 Lab.AddInventoryTransmogTooltip(tooltip, 1)
 assert(#lines == 2)
+
+SoloCollections.db = {}
+SoloCollections.Catalog = {
+    FindAppearance = function(id)
+        return { id = id, itemId = 100, name = "A piece", collected = true }
+    end,
+}
+SoloCollections.CollectionState.IsOwnedByType = function(_, id) return id == 200009 end
+dofile(addon .. "/Core/WardrobeGoals.lua")
+local set = { id = 1001, name = "A set", collected = false, variants = { { members = {
+    { slotKey = "HEAD", appearanceIds = { 200009 }, sourceItemIds = { 100 } },
+    { slotKey = "FEET", appearanceIds = { 200010 }, sourceItemIds = { 200 } },
+} } } }
+local Goals = SoloCollections.WardrobeGoals
+assert(Goals.ToggleTracked(set) and Goals.IsTracked(set))
+assert(not Goals.ToggleTracked(set) and not Goals.IsTracked(set), "tracking must be reversible")
+state = Lab.CreateState()
+assert(state:LoadCollectedSet(set))
+assert(state.draftBySlot.HEAD.id == 200009 and state.draftBySlot.FEET == nil)
+assert(state:BuildIntentEntries() == "1:200009", "a partial set must never submit locked pieces")
+assert(state:GetApplyCost() == nil, "partial sets still require a fresh quote and paid confirmation")
+SoloCollections.CollectionState.IsOwnedByType = function() return false end
+state = Lab.CreateState()
+assert(not state:LoadCollectedSet(set), "local collected flags cannot grant ownership")
 lines = {}
 tooltipFrame.OnEvent(tooltipFrame, "PLAYER_EQUIPMENT_CHANGED", 1)
 Lab.AddInventoryTransmogTooltip(tooltip, 1)

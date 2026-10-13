@@ -24,7 +24,11 @@ or switch automatically. Each implementation is a separate commit on `main`.
    have their own saved state and no longer reset on reopening or overwrite the
    journal. Item/set pages retain browsing position; journal selections survive
    closing while model renderers are still cleaned up.
-6. Set collecting goals and explicit application of collected pieces.
+6. Set goals: tracking/untracking, a tracked-only journal view, missing-piece
+   tooltips and item-browser links from pieces (Alt-click still cycles sources).
+   Incomplete studio presets offer "Use Collected Pieces", which creates a draft
+   from authoritative owned appearances on equipped slots. Applying still needs
+   a fresh quote and explicit paid confirmation; locked pieces are never sent.
 7. Saved outfit browsing and visible save/update actions.
 8. Release-check maintenance and documented real-client acceptance matrix.
 

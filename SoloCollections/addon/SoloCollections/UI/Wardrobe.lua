@@ -1384,6 +1384,24 @@ function UI.CreateWardrobePage(parent)
     applySet:Hide()
     page.scApplySet = applySet
 
+    local trackSet = CreateFrame("Button", nil, preview, "UIPanelButtonTemplate")
+    trackSet:SetWidth(104)
+    trackSet:SetHeight(25)
+    trackSet:SetPoint("RIGHT", reset, "LEFT", -8, 0)
+    trackSet:SetText(L("Track Set", "追踪套装"))
+    trackSet:SetScript("OnClick", function()
+        SC.WardrobeGoals.ToggleTracked(page.scSetSelectedRecord)
+        page:Refresh()
+    end)
+    trackSet:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText(L("Collect this set", "收集此套装"), 1, 0.82, 0.18)
+        SC.WardrobeGoals.AddMissingTooltip(GameTooltip, page.scSetSelectedRecord)
+        GameTooltip:AddLine(L("Click a piece to browse its appearance and sources.", "点击部件可查看外观和来源。"), 0.72, 0.72, 0.72, true)
+        GameTooltip:Show()
+    end)
+    trackSet:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     local variantDropdown = CreateFrame("Frame", "SoloCollectionsWardrobeSetVariantDropdown", preview, "UIDropDownMenuTemplate")
     variantDropdown:SetPoint("BOTTOMRIGHT", preview, "BOTTOMRIGHT", 12, 42)
     UIDropDownMenu_SetWidth(variantDropdown, 72)
@@ -1472,6 +1490,22 @@ function UI.CreateWardrobePage(parent)
             end
         end)
         piece:SetScript("OnClick", function(self, button)
+            if button == "LeftButton" and not (IsAltKeyDown and IsAltKeyDown()) and self.scItemId then
+                SC.db.wardrobeTab = "ITEMS"
+                wardrobeFilters:Set("slot", self.scSlotKey or "ALL")
+                wardrobeFilters:Set("armorType", "ALL")
+                wardrobeFilters:Set("weaponType", "ALL")
+                SC.db.query = "item:" .. tostring(self.scItemId)
+                page.scItemPage = 1
+                if UI.CollectionsFrame and UI.CollectionsFrame.scSearchBox then
+                    local suppressed = UI.scSuppressRefresh
+                    UI.scSuppressRefresh = true
+                    UI.CollectionsFrame.scSearchBox:SetText(SC.db.query)
+                    UI.scSuppressRefresh = suppressed
+                end
+                if UI.SetWardrobeTab then UI.SetWardrobeTab("ITEMS") else page:Refresh() end
+                return
+            end
             local sourceItemIds = self.scSourceItemIds
             if button ~= "LeftButton" or not IsAltKeyDown or not IsAltKeyDown() or
                 not sourceItemIds or #sourceItemIds <= 1 or not self.scAltSourceKey then
@@ -1799,6 +1833,7 @@ function UI.CreateWardrobePage(parent)
         local collectedPieces = tonumber(record.collectedCount) or 0
         local requiredPieces = tonumber(record.requiredCount) or #previewItems
         setProgress:SetText(L("Set progress: ", "套装收集进度：") .. collectedPieces .. " / " .. requiredPieces)
+        trackSet:SetText(SC.WardrobeGoals.IsTracked(record) and L("Untrack Set", "取消追踪") or L("Track Set", "追踪套装"))
         setProgress:Show()
     end
 
@@ -2157,6 +2192,17 @@ function UI.CreateWardrobePage(parent)
                     sources.hasArrow = true
                     sources.value = "appearanceSources"
                     UIDropDownMenu_AddButton(sources, level)
+                else
+                    local tracked = UIDropDownMenu_CreateInfo()
+                    tracked.text = L("Tracked Sets Only", "仅追踪套装")
+                    tracked.isNotRadio = true
+                    tracked.checked = SC.db.trackedWardrobeSetsOnly == true
+                    tracked.func = function()
+                        SC.db.trackedWardrobeSetsOnly = not SC.db.trackedWardrobeSetsOnly
+                        setSetOffset(0, true)
+                        page:Refresh()
+                    end
+                    UIDropDownMenu_AddButton(tracked, level)
                 end
             elseif level == 2 and UIDROPDOWNMENU_MENU_VALUE == "appearanceSources" then
                 UI.AddAppearanceSourceMenuButtons(level, function()
@@ -2259,6 +2305,13 @@ function UI.CreateWardrobePage(parent)
         preview:Show()
         local allRecords, setFilters = wardrobeFilters:QuerySets()
         allRecords = allRecords or {}
+        if SC.db.trackedWardrobeSetsOnly then
+            local tracked = {}
+            for _, record in ipairs(allRecords) do
+                if SC.WardrobeGoals.IsTracked(record) then tracked[#tracked + 1] = record end
+            end
+            allRecords = tracked
+        end
         page.scFlatSetRecordCount = #allRecords
         page.scSetRecordCount = #allRecords
         local maxOffset = #allRecords > 0

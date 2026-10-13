@@ -463,6 +463,10 @@ function Lab.GetEquippedAppearanceRecord(slotKey, equippedId)
 end
 
 function Lab.FindAppearanceRecord(collectionId, itemId)
+    if collectionId and SC.Catalog and SC.Catalog.FindAppearance then
+        local record = SC.Catalog.FindAppearance(collectionId)
+        if record then return record end
+    end
     local revision = currentRevision()
     if not appearanceById or appearanceIndexRevision ~= revision then
         rebuildAppearanceIndex()
@@ -638,6 +642,24 @@ function State:SetPreset(record)
     self.requestState = { status = "LOCAL_PRESET", record = record, revision = currentRevision() }
     self:ScheduleQuote()
     self:Notify("SET_PRESET")
+    return true
+end
+
+function State:LoadCollectedSet(record)
+    if self.requestState.status == "REQUESTING" then return false, "REQUEST_PENDING" end
+    local drafts, dirty, count = {}, {}, 0
+    for _, piece in ipairs(SC.WardrobeGoals.GetPieces(record)) do
+        if piece.owned and piece.appearance and self:IsSlotOccupied(piece.slotKey) then
+            drafts[piece.slotKey], dirty[piece.slotKey] = piece.appearance, true
+            count = count + 1
+        end
+    end
+    if count == 0 then return false, "NOT_OWNED" end
+    self.presetRecord, self.activeOutfitUid = nil, nil
+    self.draftBySlot, self.dirtySlots = drafts, dirty
+    self.requestState = { status = "LOCAL_DRAFT", revision = currentRevision() }
+    self:ScheduleQuote()
+    self:Notify("SET_COLLECTED_DRAFT")
     return true
 end
 

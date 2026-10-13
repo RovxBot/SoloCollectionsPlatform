@@ -1766,6 +1766,16 @@ function Catalog.GetProgress(category, filters)
     return collected, total
 end
 
+function Catalog.FindAppearance(collectionId)
+    local store = buildAppearanceStore()
+    local index = store and store.indexById[tonumber(collectionId)]
+    if not index then return nil end
+    local record = materializeAppearance(store, index)
+    overlayCollectionState("APPEARANCES", record, false)
+    record.favorite = getFavorite("APPEARANCES", record)
+    return record
+end
+
 function Catalog.ToggleDemoFavorite(category, id)
     if category == "MOUNTS" or category == "PETS" then
         local bridge = SC.Bridge
