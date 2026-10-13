@@ -284,7 +284,9 @@ function UI.CreateTransmogFrame()
         -- ez 2.2: progress is TOPLEFT of ItemsTab (195, -11), not above the
         -- collection frame. Search/filter live on the 662 CollectionFrame.
         progress:ClearAllPoints()
-        progress:SetPoint("TOPLEFT", itemTab, "TOPLEFT", 195, -11)
+        progress:SetPoint("TOPLEFT", itemTab, "TOPLEFT", 282, -11)
+        progress:SetWidth(128)
+        progress.scStatusBar:SetWidth(112)
         progress:SetFrameLevel(frame:GetFrameLevel() + 40)
         searchFilterHost:SetParent(right)
         searchFilterHost:ClearAllPoints()
@@ -482,6 +484,11 @@ function UI.SyncTransmogFilterChrome(mode, closeMenus)
     local frame = UI.TransmogFrame
     if not (frame and frame.scFilterButton) then return end
     if frame.scFilterPopup then frame.scFilterPopup:Hide() end
+    if mode == "OUTFITS" then
+        frame.scFilterButton:Hide()
+        if closeMenus and CloseDropDownMenus then CloseDropDownMenus() end
+        return
+    end
     if frame.scFilterButton.scLabel then
         frame.scFilterButton.scLabel:SetText(mode == "SETS" and L("Filters", "过滤器") or L("Sources", "来源"))
     end
@@ -564,7 +571,7 @@ function UI.SyncTransmogArmorDropDown(slot, mode)
     local frame = UI.TransmogFrame
     local dropDown = frame and frame.scArmorDropDown
     if not dropDown then return end
-    if mode == "SETS" or not (SC.Catalog and SC.Catalog.IsArmorFilterSlot and SC.Catalog.IsArmorFilterSlot(slot)) then
+    if mode ~= "ITEMS" or not (SC.Catalog and SC.Catalog.IsArmorFilterSlot and SC.Catalog.IsArmorFilterSlot(slot)) then
         dropDown:Hide()
         return
     end
@@ -599,7 +606,7 @@ function UI.SyncTransmogWeaponDropDown(slot, mode)
     local frame = UI.TransmogFrame
     local dropDown = frame and frame.scWeaponDropDown
     if not dropDown then return end
-    if mode == "SETS" or not (SC.Catalog and SC.Catalog.IsWeaponFilterSlot(slot)) then
+    if mode ~= "ITEMS" or not (SC.Catalog and SC.Catalog.IsWeaponFilterSlot(slot)) then
         dropDown:Hide()
         return
     end

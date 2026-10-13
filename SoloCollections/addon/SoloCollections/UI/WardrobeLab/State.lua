@@ -1460,10 +1460,13 @@ function State:CaptureOutfitSlots()
             slots[definition.key] = { id = 2, hide = true }
         elseif record then
             slots[definition.key] = { id = record.id, itemId = recordItemId(record) }
-        else
+        elseif self:IsSlotOccupied(definition.key) then
             local equippedId = self.equippedBySlot[definition.key]
-            record = Lab.FindAppearanceRecord(nil, equippedId)
-            if record then
+            local appliedId = self:GetAppliedCollectionId(definition.key)
+            record = Lab.FindAppearanceRecord(appliedId, equippedId)
+            if appliedId == 2 then
+                slots[definition.key] = { id = 2, hide = true }
+            elseif record then
                 slots[definition.key] = { id = record.id, itemId = equippedId }
             end
         end
@@ -1492,7 +1495,13 @@ local function encodeOutfitEntries(slotMap)
     return table.concat(parts, ",")
 end
 
+function State:TrackOutfitRequest(requestId)
+    self.requestState = { status = "REQUESTING", kind = "OUTFIT", requestId = requestId }
+    self:Notify("REQUESTING_OUTFIT")
+end
+
 function State:SaveOutfit(name)
+    if self.requestState.status == "REQUESTING" then return nil, "REQUEST_PENDING" end
     name = string.gsub(tostring(name or ""), "^%s+", "")
     name = string.gsub(name, "%s+$", "")
     if name == "" or string.len(name) > Lab.OUTFIT_NAME_MAX then return nil, "INVALID_NAME" end
@@ -1513,10 +1522,12 @@ function State:SaveOutfit(name)
         end
     end)
     if not requestId then return nil, "REQUEST_NOT_SENT" end
+    self:TrackOutfitRequest(requestId)
     return { pending = true, requestId = requestId }
 end
 
 function State:OverwriteOutfit(uid)
+    if self.requestState.status == "REQUESTING" then return nil, "REQUEST_PENDING" end
     uid = tonumber(uid)
     if not uid then return nil, "INVALID_OUTFIT" end
     if not Lab.IsOutfitReady() or not SC.Bridge or type(SC.Bridge.SaveOutfit) ~= "function" then
@@ -1539,10 +1550,12 @@ function State:OverwriteOutfit(uid)
         end
     end)
     if not requestId then return nil, "REQUEST_NOT_SENT" end
+    self:TrackOutfitRequest(requestId)
     return { pending = true, requestId = requestId }
 end
 
 function State:RenameOutfit(uid, name)
+    if self.requestState.status == "REQUESTING" then return nil, "REQUEST_PENDING" end
     uid = tonumber(uid)
     name = string.gsub(tostring(name or ""), "^%s+", "")
     name = string.gsub(name, "%s+$", "")
@@ -1561,6 +1574,7 @@ function State:RenameOutfit(uid, name)
         end
     end)
     if not requestId then return nil, "REQUEST_NOT_SENT" end
+    self:TrackOutfitRequest(requestId)
     return { pending = true, requestId = requestId }
 end
 
@@ -1593,6 +1607,7 @@ function State:LoadOutfit(outfit)
 end
 
 function State:DeleteOutfit(uid)
+    if self.requestState.status == "REQUESTING" then return false, "REQUEST_PENDING" end
     uid = tonumber(uid)
     if not uid or not Lab.IsOutfitReady() or not SC.Bridge or type(SC.Bridge.DeleteOutfit) ~= "function" then
         return false
@@ -1607,6 +1622,7 @@ function State:DeleteOutfit(uid)
             self:Notify("REQUEST_RESULT")
         end
     end)
+    if requestId then self:TrackOutfitRequest(requestId) end
     return requestId ~= nil
 end
 

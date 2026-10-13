@@ -476,6 +476,9 @@ function Lab.CreateSources(parent, state)
     local setTab = UI.CreateTopSubTab(host, L("Sets", "套装"), function() host:SetMode("SETS") end)
     setTab:SetPoint("LEFT", itemTab, "RIGHT", 0, 0)
     setTab:SetFrameLevel(host:GetFrameLevel() + 20)
+    local outfitTab = UI.CreateTopSubTab(host, L("Outfits", "方案"), function() host:SetMode("OUTFITS") end)
+    outfitTab:SetPoint("LEFT", setTab, "RIGHT", 0, 0)
+    outfitTab:SetFrameLevel(host:GetFrameLevel() + 20)
 
     local function scrollItems(delta)
         if not delta or delta == 0 then return end
@@ -868,6 +871,13 @@ function Lab.CreateSources(parent, state)
             end
         end
 
+        local outfitName = hit:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        outfitName:SetPoint("BOTTOM", hit, "BOTTOM", 0, 4)
+        outfitName:SetWidth(SET_WIDTH - 8)
+        outfitName:SetHeight(28)
+        outfitName:SetJustifyH("CENTER")
+        outfitName:Hide()
+
         function card:RunSetPresent(record, generation, done)
             local finished = false
             local function finish()
@@ -893,8 +903,15 @@ function Lab.CreateSources(parent, state)
         end
 
         function card:SetRecord(record)
-            local changed = not record or self.scRecordId ~= record.id
+            local changed = not record or self.scRecordId ~= record.id or self.scPreviewKey ~= record.previewKey
             self.scRecord = record
+            self.scPreviewKey = record and record.previewKey
+            if record and record.savedOutfit then
+                outfitName:SetText(record.name or "")
+                outfitName:Show()
+            else
+                outfitName:Hide()
+            end
             if not record then
                 self.scRecordId = nil
                 applySetOwnership(nil)
@@ -923,7 +940,9 @@ function Lab.CreateSources(parent, state)
         hit:SetScript("OnClick", function(_, mouseButton)
             local record = card.scRecord
             if not record then return end
-            if mouseButton == "RightButton" then
+            if record.savedOutfit then
+                if mouseButton == "LeftButton" then Lab.SelectStoredOutfit(state, record.savedOutfit) end
+            elseif mouseButton == "RightButton" then
                 SC.Catalog.ToggleDemoFavorite("SETS", record.id)
                 host:Refresh()
             else
@@ -940,8 +959,12 @@ function Lab.CreateSources(parent, state)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetText(record.name or L("Unknown set", "未知套装"), 1, 0.82, 0.18)
             GameTooltip:AddLine(L("Collection progress: ", "收集进度：") .. owned .. " / " .. required, 0.45, 0.90, 0.34)
-            addSetSourceTooltip(record)
-            GameTooltip:AddLine(L("Left-click to load the outfit preset · Right-click to favorite", "左键加载本地套装预设 · 右键偏好"), 0.75, 0.72, 0.66)
+            if record.savedOutfit then
+                GameTooltip:AddLine(L("Load this look, then Apply to confirm its gold cost.", "载入方案后，点击应用确认金币费用。"), 0.75, 0.72, 0.66, true)
+            else
+                addSetSourceTooltip(record)
+                GameTooltip:AddLine(L("Left-click to load the outfit preset · Right-click to favorite", "左键加载本地套装预设 · 右键偏好"), 0.75, 0.72, 0.66)
+            end
             GameTooltip:Show()
         end)
         hit:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -1005,12 +1028,13 @@ function Lab.CreateSources(parent, state)
     setEmpty:Hide()
 
     function host:SetMode(mode)
-        mode = mode == "SETS" and "SETS" or "ITEMS"
+        mode = (mode == "SETS" or mode == "OUTFITS") and mode or "ITEMS"
         if self.mode ~= mode then
             self.mode = mode
         end
         itemTab:SetSelected(mode == "ITEMS")
         setTab:SetSelected(mode == "SETS")
+        outfitTab:SetSelected(mode == "OUTFITS")
         if mode == "ITEMS" then
             itemsView:Show()
             setsView:Hide()
@@ -1066,7 +1090,7 @@ function Lab.CreateSources(parent, state)
 
     function host:HandleVisualKey(key)
         if key == "PAGEUP" or key == "PAGEDOWN" then
-            if self.mode == "SETS" then
+            if self.mode ~= "ITEMS" then
                 local totalPages = self.setTotalPages or 1
                 if key == "PAGEUP" then
                     self.setPage = math.max(1, (self.setPage or 1) - 1)
@@ -1087,10 +1111,12 @@ function Lab.CreateSources(parent, state)
         if key ~= "LEFT" and key ~= "RIGHT" and key ~= "UP" and key ~= "DOWN" then
             return false
         end
-        if self.mode == "SETS" then
+        if self.mode ~= "ITEMS" then
             local matches = self.scSetMatches or {}
             if #matches == 0 then return false end
-            local current = state.presetRecord and findRecordIndex(matches, state.presetRecord.id)
+            local currentId = self.mode == "OUTFITS" and state.activeOutfitUid
+                and ("outfit:" .. tostring(state.activeOutfitUid)) or (state.presetRecord and state.presetRecord.id)
+            local current = findRecordIndex(matches, currentId)
             local nextIndex
             if current then
                 nextIndex = adjustedDisplayIndex(current, #matches, SET_COLUMNS, key)
@@ -1100,7 +1126,8 @@ function Lab.CreateSources(parent, state)
             local record = matches[nextIndex]
             if not record then return false end
             self.setPage = math.floor((nextIndex - 1) / SET_PAGE_SIZE) + 1
-            state:SetPreset(record)
+            if record.savedOutfit then Lab.SelectStoredOutfit(state, record.savedOutfit)
+            else state:SetPreset(record) end
             if Lab.PlaySound then Lab.PlaySound("item") end
             return true
         end
@@ -1141,10 +1168,12 @@ function Lab.CreateSources(parent, state)
         if UI.SyncTransmogArmorDropDown then
             UI.SyncTransmogArmorDropDown(state.selectedSlot, self.mode)
         end
-        if self.mode == "SETS" then
+        if self.mode ~= "ITEMS" then
             if UI.SyncTransmogClassDropDown then UI.SyncTransmogClassDropDown(self.mode) end
             filters = copySetFilters()
-            local matches = arrangeSetMatches(SC.Catalog.QueryAll("SETS", query, filters))
+            local outfitsMode = self.mode == "OUTFITS"
+            local matches = outfitsMode and Lab.GetOutfitCards(query)
+                or arrangeSetMatches(SC.Catalog.QueryAll("SETS", query, filters))
             self.scSetMatches = matches
             local total = #matches
             local totalPages = math.max(1, math.ceil(total / SET_PAGE_SIZE))
@@ -1163,10 +1192,14 @@ function Lab.CreateSources(parent, state)
                     state.presetRecord = record
                 end
                 card:SetRecord(record)
-                card:SetSelected(record and state.presetRecord and record.id == state.presetRecord.id)
+                card:SetSelected(record and ((record.savedOutfit and state.activeOutfitUid == record.savedOutfit.uid)
+                    or (state.presetRecord and record.id == state.presetRecord.id)))
             end
             if #records == 0 then
-                UI.ShowEmptyState(setEmpty, host, L("No matching sets", "没有符合条件的套装"), L("Adjust the search, class, or collection filters and try again.", "调整搜索、职业或收藏过滤后再试。"))
+                UI.ShowEmptyState(setEmpty, host,
+                    outfitsMode and L("No saved outfits match", "没有符合条件的方案") or L("No matching sets", "没有符合条件的套装"),
+                    outfitsMode and L("Save a preview using Save, or clear the search.", "用保存按钮保存预览，或清除搜索。")
+                        or L("Adjust the search, class, or collection filters and try again.", "调整搜索、职业或收藏过滤后再试。"))
             else
                 UI.HideEmptyState(setEmpty)
             end
@@ -1194,7 +1227,15 @@ function Lab.CreateSources(parent, state)
                 end
             end
             if canApplySet then applySet:Enable() else applySet:Disable() end
-            setProgress("SETS", filters)
+            if outfitsMode then
+                applySet:Hide()
+                selectedSetName:SetText(L("Select a saved outfit to preview it", "选择已保存方案进行预览"))
+                local frame = UI.TransmogFrame
+                if frame and frame.scProgress then frame.scProgress:SetProgress(#Lab.GetStoredOutfits(), Lab.MAX_OUTFITS) end
+            else
+                applySet:Show()
+                setProgress("SETS", filters)
+            end
         else
             if UI.SyncTransmogClassDropDown then UI.SyncTransmogClassDropDown(self.mode) end
             local matches = arrangeAppearanceMatches(
@@ -1258,11 +1299,13 @@ function Lab.CreateSources(parent, state)
     host.scSetsView = setsView
     host.scItemTab = itemTab
     host.scSetTab = setTab
+    host.scOutfitTab = outfitTab
     host.scItemControls = itemControls
     host.scSetControls = setControls
     host.scApplySet = applySet
     host.scSelectedSetName = selectedSetName
     itemTab:SetSelected(true)
     setTab:SetSelected(false)
+    outfitTab:SetSelected(false)
     return host
 end

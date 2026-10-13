@@ -29,7 +29,11 @@ or switch automatically. Each implementation is a separate commit on `main`.
    Incomplete studio presets offer "Use Collected Pieces", which creates a draft
    from authoritative owned appearances on equipped slots. Applying still needs
    a fresh quote and explicit paid confirmation; locked pieces are never sent.
-7. Saved outfit browsing and visible save/update actions.
+7. Saved looks: an Outfits thumbnail tab reuses the existing eight set-model
+   frames and queue, supports name/item search, paging and keyboard selection,
+   and refreshes previews when a preset changes. A visible Save/Update button
+   complements the management dropdown. Saving captures confirmed appearances
+   and hidden slots; loading only creates a draft and never sends a paid apply.
 8. Release-check maintenance and documented real-client acceptance matrix.
 
 Full localized catalogue/source names require reviewed locale inputs. Camera

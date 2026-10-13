@@ -61,6 +61,8 @@ function Lab.CreatePage(parent)
         if request.status == "REQUESTING" then
             if request.delayed then
                 text = L("Still waiting for server confirmation…", "仍在等待服务端确认…")
+            elseif request.kind == "OUTFIT" then
+                text = L("Updating saved outfits…", "正在更新已保存方案…")
             elseif request.kind == "CLEAR" then
                 text = L("Restoring original equipment appearance…", "正在恢复原装备外观…")
             elseif request.kind == "SET" then
@@ -72,7 +74,7 @@ function Lab.CreatePage(parent)
             end
         elseif request.status == "CONFIRMED" and request.kind == "CLEAR" then
             text = L("Original equipment appearance restored", "已恢复原装备外观")
-        elseif request.status == "LOCAL_DRAFT" or request.status == "LOCAL_PRESET" then
+        elseif request.status == "LOCAL_DRAFT" or request.status == "LOCAL_PRESET" or request.status == "OUTFIT_LOADED" then
             local canApply, reason, owned, required
             if state.presetRecord and state.GetSetApplyState then
                 canApply, reason, owned, required = state:GetSetApplyState()
@@ -181,7 +183,7 @@ function Lab.CreatePage(parent)
                 state.requestState.delayed = true
                 state:Notify("REQUEST_RESULT")
             end
-            if tonumber(typeId) ~= 18 then return end
+            if tonumber(typeId) ~= 18 and tonumber(typeId) ~= 19 then return end
             if page:IsShown() then
                 scheduleRefresh(page, 3)
             end

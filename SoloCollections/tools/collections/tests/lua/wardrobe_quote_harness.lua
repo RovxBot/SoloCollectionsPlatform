@@ -147,6 +147,35 @@ assert(state:GetApplyCost() == nil, "partial sets still require a fresh quote an
 SoloCollections.CollectionState.IsOwnedByType = function() return false end
 state = Lab.CreateState()
 assert(not state:LoadCollectedSet(set), "local collected flags cannot grant ownership")
+
+local outfits = {
+    { uid = 1, name = "Raid look", slots = { HEAD = 200009, BACK = 2 } },
+    { uid = 2, name = "Unknown look", slots = { HEAD = 999999 } },
+}
+SoloCollections.CollectionState.IsOutfitReady = function() return true end
+SoloCollections.CollectionState.GetAccountOutfits = function() return outfits end
+SoloCollections.CollectionState.IsOwnedByType = function(_, id) return id == 200009 end
+SoloCollections.Catalog.FindAppearance = function(id)
+    if id == 999999 then return nil end
+    return { id = id, itemId = 100, name = "A piece", collected = id == 200009 }
+end
+dofile(addon .. "/UI/WardrobeLab/Outfits.lua")
+local cards = Lab.GetOutfitCards("")
+assert(#cards == 2 and cards[1].collected and not cards[2].collected)
+assert(#cards[1].variants[1].members == 1, "hidden slots must stay undressed in gallery previews")
+assert(#cards[2].variants[1].members == 0, "unknown identities cannot select arbitrary preview models")
+assert(#Lab.GetOutfitCards("raid") == 1)
+local previewKey = cards[1].previewKey
+outfits[1].slots.HEAD = 200010
+assert(Lab.GetOutfitCards("")[1].previewKey ~= previewKey, "overwriting a look must invalidate its thumbnail")
+outfits[1].slots.HEAD = 200009
+state = Lab.CreateState()
+before = #applies
+assert(Lab.SelectStoredOutfit(state, outfits[1]))
+assert(state:HasDraft() and state:GetApplyCost() == nil and #applies == before)
+state = Lab.CreateState()
+state:RememberAppliedSlot("HEAD", 200009)
+assert(state:CaptureOutfitSlots().HEAD.id == 200009, "saving must capture the applied look rather than the base item")
 lines = {}
 tooltipFrame.OnEvent(tooltipFrame, "PLAYER_EQUIPMENT_CHANGED", 1)
 Lab.AddInventoryTransmogTooltip(tooltip, 1)

@@ -144,6 +144,57 @@ function Lab.PromptSaveOutfit(state)
     promptSave(state)
 end
 
+function Lab.SelectStoredOutfit(state, outfit)
+    if state.requestState.status == "REQUESTING" then return false end
+    if state:HasDraft() and state.activeOutfitUid ~= outfit.uid then
+        return Lab.Confirm(L("Loading an outfit replaces pending changes that have not been applied.", "载入方案会替换当前未应用的待定幻化。"), function()
+            state:LoadOutfit(outfit)
+        end)
+    end
+    return state:LoadOutfit(outfit)
+end
+
+function Lab.GetOutfitCards(query)
+    query = string.lower(string.gsub(tostring(query or ""), "^%s*(.-)%s*$", "%1"))
+    local result = {}
+    for _, outfit in ipairs(Lab.GetStoredOutfits()) do
+        local members, keywords, signature, owned, total = {}, { outfit.name or "" }, {}, 0, 0
+        for _, definition in ipairs(Lab.SLOTS) do
+            local value = outfit.slots and outfit.slots[definition.key]
+            local id = tonumber(type(value) == "table" and value.id or value)
+            signature[#signature + 1] = tostring(id or "-")
+            if id then
+                total = total + 1
+                if id == 2 then
+                    owned = owned + 1
+                else
+                    local appearance = SC.Catalog.FindAppearance and SC.Catalog.FindAppearance(id)
+                    if appearance then
+                        members[#members + 1] = {
+                            slotKey = definition.key, appearanceIds = { id },
+                            previewSourceItemId = appearance.itemId,
+                        }
+                        keywords[#keywords + 1] = appearance.name or ""
+                        keywords[#keywords + 1] = tostring(appearance.itemId or "")
+                    end
+                    if SC.CollectionState.IsOwnedByType(13, id) then owned = owned + 1 end
+                end
+            end
+        end
+        if query == "" or string.find(string.lower(table.concat(keywords, " ")), query, 1, true) then
+            result[#result + 1] = {
+                -- Local preview identity only; never sent as a collection ID.
+                id = "outfit:" .. tostring(outfit.uid), name = outfit.name,
+                savedOutfit = outfit, previewKey = table.concat(signature, ","),
+                variants = { { members = members } },
+                collected = total > 0 and owned == total,
+                collectedCount = owned, requiredCount = total,
+            }
+        end
+    end
+    return result
+end
+
 function Lab.CreateOutfits(parent, state)
     local host = CreateFrame("Frame", nil, parent)
     host:SetAllPoints(parent)
@@ -153,6 +204,28 @@ function Lab.CreateOutfits(parent, state)
     dropdown:SetPoint("TOPLEFT", parent, "TOPLEFT", -14, 28)
     dropdown:SetFrameLevel(host:GetFrameLevel() + 2)
     UIDropDownMenu_SetWidth(dropdown, 188)
+
+    local save = CreateFrame("Button", nil, host, "UIPanelButtonTemplate")
+    save:SetWidth(74)
+    save:SetHeight(22)
+    save:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -5, 26)
+    save:SetScript("OnClick", function()
+        if state.activeOutfitUid then
+            local uid = state.activeOutfitUid
+            Lab.Confirm(L("Update this saved outfit with your current preview?", "用当前预览更新已保存方案？"), function()
+                state:OverwriteOutfit(uid)
+            end)
+        else
+            promptSave(state)
+        end
+    end)
+    save:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(L("Save your look", "保存外观方案"), 1, 0.82, 0.18)
+        GameTooltip:AddLine(L("Saving a preset does not apply it. Use Apply to confirm the gold cost.", "保存方案不会应用外观。点击应用可确认金币费用。"), 0.72, 0.72, 0.72, true)
+        GameTooltip:Show()
+    end)
+    save:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     local function applyEquipped()
         state:ClearDraft()
@@ -336,9 +409,16 @@ function Lab.CreateOutfits(parent, state)
             UIDropDownMenu_SetText(dropdown, L("Current Equipment", "当前装备"))
         end
         if state:HasDraft() then clear:Show() else clear:Hide() end
+        save:SetText(state.activeOutfitUid and L("Update", "更新") or L("Save…", "保存…"))
+        if state:HasDraft() and Lab.IsOutfitReady() and state.requestState.status ~= "REQUESTING" then
+            save:Enable()
+        else
+            save:Disable()
+        end
     end
     host.scDropDown = dropdown
     host.scClearButton = clear
+    host.scSaveButton = save
     host.PromptSave = function() promptSave(state) end
     return host
 end
