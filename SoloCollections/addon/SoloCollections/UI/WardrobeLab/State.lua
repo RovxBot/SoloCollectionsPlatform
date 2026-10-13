@@ -523,6 +523,20 @@ function State:SyncEquippedTrust()
     end
 end
 
+function State:OnEquipmentChanged(inventorySlotId)
+    self.equipmentGeneration = self.equipmentGeneration + 1
+    for _, definition in ipairs(Lab.SLOTS) do
+        if definition.inventorySlot + 1 == tonumber(inventorySlotId) then
+            -- Template IDs do not identify an item instance. Invalidate even
+            -- when another copy of the same item replaces the equipped one.
+            self.ignoredAppliedSlots[definition.key] = true
+            self.appliedOverlay[definition.key] = nil
+            break
+        end
+    end
+    if self:HasDraft() then self:ScheduleQuote() end
+end
+
 function State:CaptureEquipped()
     self.equippedBySlot = {}
     for _, definition in ipairs(Lab.SLOTS) do
@@ -681,6 +695,7 @@ function State:RememberAppliedSlot(slotKey, collectionId)
         self.appliedOverlay[slotKey] = { collectionId = collectionId, itemId = itemId }
         self.trustedEquippedBySlot[slotKey] = itemId
         self.ignoredAppliedSlots[slotKey] = nil
+        if Lab.ConfirmEquippedTransmog then Lab.ConfirmEquippedTransmog(slotKey) end
     else
         self.appliedOverlay[slotKey] = nil
     end
@@ -702,13 +717,11 @@ function State:RememberAppliedEntries(entries)
 end
 
 function State:GetAppliedCollectionId(slotKey)
+    if self.ignoredAppliedSlots and self.ignoredAppliedSlots[slotKey] then return nil end
     local equippedId = self.equippedBySlot and self.equippedBySlot[slotKey]
     local overlay = self.appliedOverlay and self.appliedOverlay[slotKey]
     if type(overlay) == "table" and overlay.itemId == equippedId then
         return tonumber(overlay.collectionId)
-    end
-    if self.ignoredAppliedSlots and self.ignoredAppliedSlots[slotKey] then
-        return nil
     end
     if not Lab.IsAppliedReady() then return nil end
     local applied = SC.CollectionState and SC.CollectionState.GetAppliedSlots

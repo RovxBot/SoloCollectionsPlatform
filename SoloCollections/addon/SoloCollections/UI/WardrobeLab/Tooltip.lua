@@ -139,6 +139,11 @@ local function appliedCollectionId(slotKey)
     return tonumber(applied[slotKey])
 end
 
+function Lab.ConfirmEquippedTransmog(slotKey)
+    trustedItemBySlot[slotKey] = equippedItemId(Lab.SLOT_BY_KEY[slotKey])
+    ignoredSlots[slotKey] = nil
+end
+
 local function appearanceSourceItemId(record)
     if type(record) ~= "table" then return nil end
     return tonumber(record.itemId or (record.itemIds and record.itemIds[1]))
@@ -197,7 +202,15 @@ hookTooltip(ItemRefTooltip)
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
-frame:SetScript("OnEvent", function()
+frame:SetScript("OnEvent", function(_, event, inventorySlotId)
+    if event == "PLAYER_EQUIPMENT_CHANGED" then
+        for _, definition in ipairs(Lab.SLOTS) do
+            if definition.inventorySlot + 1 == tonumber(inventorySlotId) then
+                ignoredSlots[definition.key] = true
+                break
+            end
+        end
+    end
     syncEquippedTrust()
 end)
 
@@ -208,8 +221,6 @@ if SC.Bridge and SC.Bridge.RegisterStateListener then
             local itemId = equippedItemId(definition)
             if trustedItemBySlot[definition.key] == nil then
                 trustedItemBySlot[definition.key] = itemId
-            elseif trustedItemBySlot[definition.key] == itemId then
-                ignoredSlots[definition.key] = nil
             end
         end
     end)

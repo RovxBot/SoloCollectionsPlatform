@@ -204,7 +204,7 @@ function Lab.CreatePage(parent)
     page:RegisterEvent("PLAYER_ENTERING_WORLD")
     page:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
     page:RegisterEvent("PLAYER_MONEY")
-    page:SetScript("OnEvent", function(self, event)
+    page:SetScript("OnEvent", function(self, event, inventorySlotId)
         if event == "PLAYER_ENTERING_WORLD" and SC.ModelProvider then
             SC.ModelProvider.playerEnteredAt = GetTime and GetTime() or 0
         end
@@ -212,10 +212,9 @@ function Lab.CreatePage(parent)
             if self:IsShown() then scheduleRefresh(self, 1) end
             return
         end
+        if event == "PLAYER_EQUIPMENT_CHANGED" then state:OnEquipmentChanged(inventorySlotId) end
         state:CaptureEquipped()
         if event == "PLAYER_EQUIPMENT_CHANGED" and state.EnsureSelectedSlotCanTransmog then
-            state.equipmentGeneration = state.equipmentGeneration + 1
-            if state:HasDraft() then state:ScheduleQuote() end
             state:EnsureSelectedSlotCanTransmog()
         end
         if self:IsShown() then

@@ -1,12 +1,17 @@
 local addon = assert(arg[1], "AddOn path is required")
 local now, money = 0, 1000000
-local quotes, applies, notices = {}, {}, {}
+local quotes, applies, notices, frames = {}, {}, {}, {}
 function GetTime() return now end
 function GetMoney() return money end
 function UnitName() return "Tester" end
 function GetInventoryItemID(_, slot) return slot == 1 and 100 or nil end
 function CreateFrame()
-    return { SetScript = function(self, key, fn) self[key] = fn end }
+    local frame = {
+        SetScript = function(self, key, fn) self[key] = fn end,
+        RegisterEvent = function() end,
+    }
+    frames[#frames + 1] = frame
+    return frame
 end
 function StaticPopup_Show() return {} end
 SoloCollections = {
@@ -95,5 +100,38 @@ assert(#applies == before, "equipment changes must invalidate confirmation")
 ready(state, 1)
 canApply, reason = state:GetDraftApplyState()
 assert(not canApply and reason == "INSUFFICIENT_FUNDS")
+
+state = Lab.CreateState()
+state:RememberAppliedSlot("HEAD", 200005)
+assert(state:GetAppliedCollectionId("HEAD") == 200005)
+state:OnEquipmentChanged(3)
+assert(state:GetAppliedCollectionId("HEAD") == 200005, "unrelated gear slots keep their indicators")
+state:OnEquipmentChanged(1)
+state:CaptureEquipped()
+assert(state.equippedBySlot.HEAD == 100)
+assert(state:GetAppliedCollectionId("HEAD") == nil, "same-template swaps must discard the old instance's overlay")
+state:RememberAppliedSlot("HEAD", 200006)
+assert(state:GetAppliedCollectionId("HEAD") == 200006, "a confirmed apply binds the new item")
+
+local refreshed
+SoloCollections.Bridge.RegisterStateListener = function(callback) refreshed = callback end
+SoloCollections.CollectionState.GetAppliedSlots = function() return { HEAD = 2 } end
+dofile(addon .. "/UI/WardrobeLab/Tooltip.lua")
+local tooltipFrame = frames[#frames]
+tooltipFrame.OnEvent(tooltipFrame, "PLAYER_ENTERING_WORLD")
+local lines = {}
+local tooltip = { AddLine = function(_, line) lines[#lines + 1] = line end, Show = function() end }
+Lab.AddInventoryTransmogTooltip(tooltip, 1)
+assert(#lines == 2)
+lines = {}
+tooltipFrame.OnEvent(tooltipFrame, "PLAYER_EQUIPMENT_CHANGED", 1)
+Lab.AddInventoryTransmogTooltip(tooltip, 1)
+assert(#lines == 0, "same-template swaps must discard stale tooltip lines")
+refreshed("Ready", 18)
+Lab.AddInventoryTransmogTooltip(tooltip, 1)
+assert(#lines == 0, "a projection refresh must not authorize an old item instance")
+Lab.ConfirmEquippedTransmog("HEAD")
+Lab.AddInventoryTransmogTooltip(tooltip, 1)
+assert(#lines == 2)
 
 print("Wardrobe quote behavioral checks passed")
