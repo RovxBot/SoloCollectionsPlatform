@@ -1,0 +1,99 @@
+local addon = assert(arg[1], "AddOn path is required")
+local now, money = 0, 1000000
+local quotes, applies, notices = {}, {}, {}
+function GetTime() return now end
+function GetMoney() return money end
+function UnitName() return "Tester" end
+function GetInventoryItemID(_, slot) return slot == 1 and 100 or nil end
+function CreateFrame()
+    return { SetScript = function(self, key, fn) self[key] = fn end }
+end
+function StaticPopup_Show() return {} end
+SoloCollections = {
+    Localize = function(en) return en end,
+    UI = {},
+    CollectionState = {
+        GetRevision = function() return "1" end,
+        IsAppliedReady = function() return true end,
+        GetAppliedSlots = function() return {} end,
+    },
+    Bridge = {
+        QuoteApply = function(entries, count, callback)
+            quotes[#quotes + 1] = { entries = entries, count = count, callback = callback }
+            return #quotes
+        end,
+        ApplyPending = function(entries, count, callback)
+            applies[#applies + 1] = { entries = entries, count = count, callback = callback }
+            return #applies
+        end,
+    },
+}
+dofile(addon .. "/UI/WardrobeLab/State.lua")
+local Lab = SoloCollections.WardrobeLab
+Lab.Notice = function(text) notices[#notices + 1] = text end
+local function draft(state, id)
+    assert(state:SetDraft("HEAD", { id = id, itemId = id, collected = true }))
+end
+local function reply(index, copper)
+    quotes[index].callback(true, "ACCEPTED", { copper = copper, warningMask = 0 })
+end
+local function ready(state, copper)
+    state:RequestQuote()
+    reply(#quotes, copper)
+end
+
+local state = Lab.CreateState()
+draft(state, 200001)
+assert(state:GetApplyCost() == nil)
+local canApply, reason = state:GetDraftApplyState()
+assert(not canApply and reason == "QUOTE_PENDING", "an unquoted draft must be blocked")
+ready(state, 10000)
+assert(state:GetDraftApplyState() and state:GetApplyCost() == 10000)
+draft(state, 200002)
+assert(state:GetApplyCost() == nil, "the old price must disappear before debounce")
+
+state:RequestQuote()
+local obsolete = #quotes
+draft(state, 200003)
+reply(obsolete, 90000)
+assert(state:GetApplyCost() == nil, "a stale reply must not price a different draft")
+ready(state, 10000)
+Lab.ConfirmApply(state, "Apply?", function() state:BeginApplyAll() end)
+local accept = Lab.pendingPopupAccept
+draft(state, 200004)
+local before = #applies
+accept()
+assert(#applies == before, "changing the selection must invalidate confirmation")
+
+ready(state, 10000)
+Lab.ConfirmApply(state, "Apply?", function() state:BeginApplyAll() end)
+Lab.pendingPopupAccept()
+assert(#applies == before, "apply must wait for the refreshed quote")
+reply(#quotes, 20000)
+assert(#applies == before, "a changed price must require another confirmation")
+assert(state:GetApplyCost() == 20000)
+
+Lab.ConfirmApply(state, "Apply?", function() state:BeginApplyAll() end)
+Lab.pendingPopupAccept()
+reply(#quotes, 20000)
+assert(#applies == before + 1, "one confirmed price must send one paid request")
+assert(applies[#applies].entries == "1:200004")
+applies[#applies].callback(true, "ACCEPTED")
+assert(not state:HasDraft())
+
+state = Lab.CreateState()
+draft(state, 200005)
+money = 0
+ready(state, 0)
+assert(state:GetApplyCost() == 0 and state:GetDraftApplyState(), "a server-quoted zero is valid")
+Lab.ConfirmApply(state, "Apply?", function() state:BeginApplyAll() end)
+accept = Lab.pendingPopupAccept
+state.equipmentGeneration = state.equipmentGeneration + 1
+before = #applies
+accept()
+assert(#applies == before, "equipment changes must invalidate confirmation")
+ready(state, 1)
+canApply, reason = state:GetDraftApplyState()
+assert(not canApply and reason == "INSUFFICIENT_FUNDS")
+
+print("Wardrobe quote behavioral checks passed")

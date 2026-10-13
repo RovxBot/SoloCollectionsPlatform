@@ -83,7 +83,7 @@ function Lab.CreatePage(parent)
                     owned = owned or (state.presetRecord and state.presetRecord.collectedCount),
                     required = required or (state.presetRecord and state.presetRecord.requiredCount),
                 }) or (STATUS_REASON_TEXT[reason] or text)
-                textIsBlockReason = true
+                textIsBlockReason = reason ~= "QUOTE_PENDING"
             elseif pendingCount > 0 then
                 text = string.format(L("%d pending slot(s) · Click Apply to write to equipment", "待定 %d 个部位 · 点应用写入装备"), pendingCount)
             end
@@ -107,9 +107,9 @@ function Lab.CreatePage(parent)
             local slot = state.selectedSlot
             self.scWeaponHandWarning:SetActive(slot == "MAINHAND" or slot == "OFFHAND")
         end
-        local copper = 0
+        local copper
         if state.GetApplyCost then
-            copper = state:GetApplyCost() or 0
+            copper = state:GetApplyCost()
         end
         local canApply, applyReason = false, nil
         if state.presetRecord and state.GetSetApplyState then
@@ -118,10 +118,15 @@ function Lab.CreatePage(parent)
             canApply, applyReason = state:GetDraftApplyState()
         end
         if self.scMoneyFrame and Lab.UpdateQuotedMoney then
-            local color = applyReason == "INSUFFICIENT_FUNDS" and "red" or "white"
-            Lab.UpdateQuotedMoney(self.scMoneyFrame, copper, color)
+            if copper ~= nil then
+                self.scMoneyFrame:Show()
+                local color = applyReason == "INSUFFICIENT_FUNDS" and "red" or "white"
+                Lab.UpdateQuotedMoney(self.scMoneyFrame, copper, color)
+            else
+                self.scMoneyFrame:Hide()
+            end
         elseif self.scMoneyText then
-            self.scMoneyText:SetText(tostring(copper))
+            self.scMoneyText:SetText(copper ~= nil and tostring(copper) or "—")
         end
         local canClickApply = request.status ~= "REQUESTING" and canApply
         local apply = self.scApplyButton or self.scApplySlot
@@ -202,6 +207,8 @@ function Lab.CreatePage(parent)
         end
         state:CaptureEquipped()
         if event == "PLAYER_EQUIPMENT_CHANGED" and state.EnsureSelectedSlotCanTransmog then
+            state.equipmentGeneration = state.equipmentGeneration + 1
+            if state:HasDraft() then state:ScheduleQuote() end
             state:EnsureSelectedSlotCanTransmog()
         end
         if self:IsShown() then

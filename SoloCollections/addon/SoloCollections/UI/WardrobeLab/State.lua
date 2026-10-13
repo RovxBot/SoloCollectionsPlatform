@@ -105,6 +105,8 @@ Lab.APPLY_REASON_TEXT = {
     ARMOR_TYPE = L("Armor type is incompatible.", "护甲类型不兼容。"),
     UNKNOWN_IDENTITY = L("Unknown appearance.", "未知外观。"),
     COST_CHANGED = L("The cost changed. Confirm again before applying.", "费用已变化，请重新确认后再应用。"),
+    QUOTE_PENDING = L("Calculating the cost…", "正在计算费用…"),
+    DRAFT_CHANGED = L("Your selection or equipment changed. Review it and confirm again.", "外观或装备已变化，请检查后重新确认。"),
     INSUFFICIENT_FUNDS = L("Not enough gold.", "金币不足。"),
     UNSUPPORTED = L("This transmogrification is not supported by this client.", "当前版本不支持这项幻化。"),
     INVALID_REQUEST = L("Invalid request.", "请求无效。"),
@@ -498,7 +500,7 @@ function Lab.CreateState()
         presetRecord = nil, requestSerial = 0, applyQueue = {},
         activeOutfitUid = nil,
         quotedCopper = nil, quoteStatus = "UNAVAILABLE", quoteWarningMask = 0,
-        quoteToken = 0,
+        quoteToken = 0, equipmentGeneration = 0,
     }, State)
     state:CaptureEquipped()
     state:EnsureSelectedSlotCanTransmog()
@@ -775,10 +777,11 @@ function State:GetApplyWarnings()
 end
 
 function State:GetApplyCost()
-    if self.quoteStatus == "READY" and type(self.quotedCopper) == "number" then
+    if self.quoteStatus == "READY" and type(self.quotedCopper) == "number"
+        and self.quoteEntries == self:BuildIntentEntries() then
         return self.quotedCopper, "READY"
     end
-    return 0, "UNAVAILABLE"
+    return nil, self.quoteStatus or "UNAVAILABLE"
 end
 
 function State:BuildSetIntentEntries()
@@ -813,28 +816,44 @@ function State:BuildIntentEntries()
     return table.concat(parts, ","), #parts
 end
 
-function State:RequestQuote()
+function State:InvalidateQuote()
+    self.quoteToken = (self.quoteToken or 0) + 1
+    self.quotedCopper, self.quoteEntries, self.quoteWarningMask = nil, nil, 0
+    self.quoteStatus = self:HasDraft() and "QUOTE_PENDING" or "UNAVAILABLE"
+end
+
+function State:RequestQuote(callback)
+    self.quoteAt = nil
+    self:InvalidateQuote()
     local entries, count = self:BuildIntentEntries()
     if count == 0 or not SC.Bridge or type(SC.Bridge.QuoteApply) ~= "function" then
-        self.quotedCopper, self.quoteStatus, self.quoteWarningMask = nil, "UNAVAILABLE", 0
+        self.quoteStatus = "UNAVAILABLE"
+        if callback then callback(false, "BRIDGE_UNAVAILABLE") end
         return nil
     end
-    self.quoteToken = (self.quoteToken or 0) + 1
     local token = self.quoteToken
+    self:Notify("QUOTE")
     return SC.Bridge.QuoteApply(entries, count, function(ok, reason, detail)
-        if self.quoteToken ~= token then return end
+        if self.quoteToken ~= token or entries ~= self:BuildIntentEntries() then
+            if callback then callback(false, "DRAFT_CHANGED") end
+            return
+        end
         if ok and type(detail) == "table" then
             self.quotedCopper = tonumber(detail.copper) or 0
+            self.quoteEntries = entries
             self.quoteWarningMask = tonumber(detail.warningMask) or 0
             self.quoteStatus = "READY"
         else
             self.quotedCopper, self.quoteStatus = nil, reason or "UNAVAILABLE"
         end
         self:Notify("QUOTE")
+        if callback then callback(ok and self.quoteStatus == "READY", reason, detail) end
     end)
 end
 
 function State:ScheduleQuote()
+    -- Invalidate before the debounce so an old price cannot authorize a new draft.
+    self:InvalidateQuote()
     self.quoteAt = (GetTime and GetTime() or 0) + 0.2
     if self.quoteFrame then return end
     local frame = CreateFrame("Frame")
@@ -855,18 +874,35 @@ function State:ScheduleQuote()
 end
 
 function Lab.ConfirmApply(state, summary, onAccept)
-    local copper = 0
-    if state and state.GetApplyCost then
-        copper = state:GetApplyCost()
-    end
+    local copper = state and state:GetApplyCost()
+    if copper == nil then return Lab.NotifyApplyBlocked("QUOTE_PENDING") end
+    local entries = state:BuildIntentEntries()
+    local equipmentGeneration = state.equipmentGeneration
     local text = tostring(summary or L("Apply the current pending transmogrification?", "确定应用当前待定幻化？"))
-    Lab.pendingPopupAccept = onAccept
+    local function acceptQuoted()
+        if entries ~= state:BuildIntentEntries() or equipmentGeneration ~= state.equipmentGeneration then
+            return Lab.NotifyApplyBlocked("DRAFT_CHANGED")
+        end
+        if state.requestState.status == "REQUESTING" then return end
+        -- Refresh after confirmation: a popup may outlive the server's quote cache.
+        state:RequestQuote(function(ok, reason)
+            if not ok then return Lab.NotifyApplyBlocked(reason) end
+            if equipmentGeneration ~= state.equipmentGeneration then
+                return Lab.NotifyApplyBlocked("DRAFT_CHANGED")
+            end
+            if state:GetApplyCost() ~= copper then
+                return Lab.NotifyApplyBlocked("COST_CHANGED")
+            end
+            if type(onAccept) == "function" then onAccept() end
+        end)
+    end
+    Lab.pendingPopupAccept = acceptQuoted
     local dialog
     if StaticPopup_Show then
         dialog = StaticPopup_Show("SOLOCOLLECTIONS_TRANSMOG_APPLY", text, nil, copper)
     end
     if dialog then return dialog end
-    return Lab.Confirm(text, onAccept)
+    return Lab.Confirm(text, acceptQuoted)
 end
 
 function Lab.BeginApplyWithWarnings(state)
@@ -986,12 +1022,14 @@ function State:GetPendingApplySlots()
 end
 
 function State:GetAffordabilityReason()
-    if self.quoteStatus and self.quoteStatus ~= "READY" and self.quoteStatus ~= "UNAVAILABLE" then
-        return self.quoteStatus
+    local copper = self:GetApplyCost()
+    if copper == nil then
+        if self.quoteStatus == "READY" then return "QUOTE_PENDING" end
+        return self.quoteStatus == "UNAVAILABLE" and "BRIDGE_UNAVAILABLE" or self.quoteStatus or "QUOTE_PENDING"
     end
-    if self.quoteStatus == "READY" and type(self.quotedCopper) == "number" then
+    if self.quoteStatus == "READY" then
         local money = GetMoney and GetMoney() or 0
-        if self.quotedCopper > 0 and money < self.quotedCopper then
+        if copper > 0 and money < copper then
             return "INSUFFICIENT_FUNDS"
         end
     end
@@ -1216,7 +1254,6 @@ function State:BeginApplyAll()
     end
     local entries, count = self:BuildIntentEntries()
     if count == 0 then return false, "NO_DRAFT" end
-    self:RequestQuote()
     self.requestSerial = self.requestSerial + 1
     local requestToken = self.requestSerial
     self.requestState = {
@@ -1267,7 +1304,6 @@ function State:BeginApplySet()
     if self.requestState.status == "REQUESTING" then return false, "REQUEST_PENDING" end
     local entries, count = self:BuildSetIntentEntries()
     if Lab.IsAppliedReady() and count > 0 and SC.Bridge and type(SC.Bridge.ApplyPending) == "function" then
-        self:RequestQuote()
         self.requestSerial = self.requestSerial + 1
         local requestToken = self.requestSerial
         self.requestState = {
