@@ -314,8 +314,8 @@ class AddonContractTests(unittest.TestCase):
             "UI.EzCollections:CreateJournalTab(",
             "frame.scCollectionCount:Show()",
             "frame.scCollectionCount:Hide()",
-            'frame.scCollectionCount:SetLabel("所有坐骑")',
-            'frame.scCollectionCount:SetLabel("所有小宠物")',
+            'frame.scCollectionCount:SetLabel(L("All Mounts", "所有坐骑"))',
+            'frame.scCollectionCount:SetLabel(L("All Companions", "所有小宠物"))',
             "frame.scPortrait:SetTexture(UI.Media.tabs[selected] or UI.Media.launcher)",
         ):
             self.assertIn(token, journal)

@@ -281,8 +281,8 @@ function UI.CreateTransmogFrame()
     local right = page.scPanels and page.scPanels.right
     local itemTab = page.scSources and page.scSources.scItemTab
     if right and itemTab then
-        -- ez 2.2: progress is TOPLEFT of ItemsTab (195, -11), not above the
-        -- collection frame. Search/filter live on the 662 CollectionFrame.
+        -- Leave room for all three view tabs, with progress and search/filter
+        -- in the same header row of the 662px right panel.
         progress:ClearAllPoints()
         progress:SetPoint("TOPLEFT", itemTab, "TOPLEFT", 282, -11)
         progress:SetWidth(128)

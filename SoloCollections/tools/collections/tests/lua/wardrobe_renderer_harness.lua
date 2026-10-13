@@ -33,6 +33,7 @@ function CreateFrame()
     return frame
 end
 SoloCollections = {
+    Localize = function(en) return en end,
     UI = {},
     TransmorpherPreviewSetup = { classic = { Human = { [2] = { Armor = {
         Head = { x = 0, y = 0, z = 0, facing = 0, sequence = 0 },

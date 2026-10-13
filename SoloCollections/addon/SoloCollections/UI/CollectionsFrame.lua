@@ -1,5 +1,6 @@
 local SC = SoloCollections
 local UI = SC.UI
+local L = SC.Localize
 local MountJournal = UI.DragonUI and UI.DragonUI.MountJournal
 
 local DESIGN_SCREEN_WIDTH = 1920
@@ -10,9 +11,9 @@ local JOURNAL_HEIGHT = 606
 local MIN_SCALE = 0.72
 
 local TAB_DEFINITIONS = {
-    { key = "MOUNTS", label = "坐骑", title = "坐骑", cutoff = true },
-    { key = "PETS", label = "小宠物", title = "小宠物", cutoff = true },
-    { key = "WARDROBE", label = "外观", title = "外观" },
+    { key = "MOUNTS", label = L("Mounts", "坐骑"), title = L("Mounts", "坐骑"), cutoff = true },
+    { key = "PETS", label = L("Companions", "小宠物"), title = L("Companions", "小宠物"), cutoff = true },
+    { key = "WARDROBE", label = L("Appearances", "外观"), title = L("Appearances", "外观") },
 }
 
 local function isTabAvailable(key)
@@ -283,9 +284,9 @@ function UI.SetMainTab(key)
     if selected == "MOUNTS" or selected == "PETS" then
         frame.scCollectionCount:Show()
         if selected == "MOUNTS" then
-            frame.scCollectionCount:SetLabel("所有坐骑")
+            frame.scCollectionCount:SetLabel(L("All Mounts", "所有坐骑"))
         else
-            frame.scCollectionCount:SetLabel("所有小宠物")
+            frame.scCollectionCount:SetLabel(L("All Companions", "所有小宠物"))
         end
         if SC.Catalog and SC.Catalog.GetProgress then
             local collected, total = SC.Catalog.GetProgress(selected)
@@ -426,13 +427,13 @@ function UI.CreateCollectionsFrame()
     UI.EzCollections:SkinSilverMenuButton(filterButton)
 
     local companionFilterButton = MountJournal and MountJournal:CreateJournalFilterButton(searchFilterHost, {
-        label = "筛选",
+        label = L("Filters", "筛选"),
         width = 76,
         height = 20,
     })
     if not companionFilterButton then
         companionFilterButton = CreateFrame("Button", nil, searchFilterHost, "UIPanelButtonTemplate")
-        companionFilterButton:SetText("筛选")
+        companionFilterButton:SetText(L("Filters", "筛选"))
         UI.EzCollections:SkinSilverMenuButton(companionFilterButton)
     end
     companionFilterButton:SetSize(76, 20)
@@ -448,11 +449,11 @@ function UI.CreateCollectionsFrame()
     wardrobeTabs:SetHeight(32)
     wardrobeTabs:SetPoint("TOPLEFT", frame, "TOPLEFT", 58, -28)
     wardrobeTabs:SetFrameLevel(frame:GetFrameLevel() + 20)
-    local itemTab = UI.CreateTopSubTab(wardrobeTabs, "物品", function()
+    local itemTab = UI.CreateTopSubTab(wardrobeTabs, L("Items", "物品"), function()
         UI.SetWardrobeTab("ITEMS")
     end)
     itemTab:SetPoint("TOPLEFT", wardrobeTabs, "TOPLEFT", 0, 0)
-    local setTab = UI.CreateTopSubTab(wardrobeTabs, "套装", function()
+    local setTab = UI.CreateTopSubTab(wardrobeTabs, L("Sets", "套装"), function()
         UI.SetWardrobeTab("SETS")
     end)
     setTab:SetPoint("LEFT", itemTab, "RIGHT", 0, 0)

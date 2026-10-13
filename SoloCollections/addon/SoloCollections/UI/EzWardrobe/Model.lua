@@ -1,4 +1,5 @@
 local SC = SoloCollections
+local L = SC.Localize
 
 SC.EzWardrobe = SC.EzWardrobe or {}
 SC.EzWardrobe.Model = SC.EzWardrobe.Model or {}
@@ -378,18 +379,18 @@ local function setUnavailable(lifecycle, reason)
     end
     if frame.scUnavailableText then
         local labels = {
-            PLAYER_MODEL_LOAD_FAILED = "装备预览未就绪",
-            CAPABILITY_MISSING = "SoloCam 武器预览未就绪",
-            PREVIEW_PROTOCOL_MISMATCH = "SoloCam 武器协议不匹配",
-            INVALID_ITEM_ID = "物品无效",
-            ITEM_QUERY_FAILED = "物品数据未就绪",
-            ARMOR_SLOT_UNAVAILABLE = "护甲部位未映射",
-            WEAPON_SUBCLASS_UNAVAILABLE = "武器分类未就绪",
-            TRANSMORPHER_SETUP_UNAVAILABLE = "物品构图未就绪",
-            MODEL_UNAVAILABLE = "物品模型未就绪",
-            TRYON_FAILED = "物品试穿失败",
+            PLAYER_MODEL_LOAD_FAILED = L("Equipment preview is not ready", "装备预览未就绪"),
+            CAPABILITY_MISSING = L("Weapon preview is unavailable", "SoloCam 武器预览未就绪"),
+            PREVIEW_PROTOCOL_MISMATCH = L("Weapon preview needs a matching update", "SoloCam 武器协议不匹配"),
+            INVALID_ITEM_ID = L("Invalid item", "物品无效"),
+            ITEM_QUERY_FAILED = L("Item information is not ready", "物品数据未就绪"),
+            ARMOR_SLOT_UNAVAILABLE = L("This armor slot cannot be previewed", "护甲部位未映射"),
+            WEAPON_SUBCLASS_UNAVAILABLE = L("This weapon type cannot be previewed", "武器分类未就绪"),
+            TRANSMORPHER_SETUP_UNAVAILABLE = L("Preview framing is unavailable", "物品构图未就绪"),
+            MODEL_UNAVAILABLE = L("Item model is unavailable", "物品模型未就绪"),
+            TRYON_FAILED = L("The item could not be previewed", "物品试穿失败"),
         }
-        frame.scUnavailableText:SetText(labels[reason] or "物品预览不可用")
+        frame.scUnavailableText:SetText(labels[reason] or L("Item preview unavailable", "物品预览不可用"))
     end
     if frame.scUnavailable then frame.scUnavailable:Show() end
     return false, reason

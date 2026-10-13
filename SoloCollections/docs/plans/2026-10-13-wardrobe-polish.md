@@ -20,6 +20,8 @@ or switch automatically. Each implementation is a separate commit on `main`.
    clients see a readable item-ID/loading label, refreshed when native names arrive.
    Queries accept primary/alternative item IDs and `item:<id>` alongside names.
    Full catalogue and detailed source translation still requires locale inputs.
+   Journal tabs/counts and unavailable-preview messages also use localized copy;
+   the unconfirmed-write message is short enough for the existing footer.
 5. Favorites-only filtering for studio items/sets. Studio searches and filters
    have their own saved state and no longer reset on reopening or overwrite the
    journal. Item/set pages retain browsing position; journal selections survive
