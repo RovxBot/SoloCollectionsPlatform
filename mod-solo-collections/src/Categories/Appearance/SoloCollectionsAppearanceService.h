@@ -19,6 +19,7 @@
 
 class Item;
 class Player;
+class Quest;
 enum class TransmogApplySource : std::uint8_t;
 struct TransmogApplyResult;
 
@@ -81,6 +82,9 @@ public:
     [[nodiscard]] bool LoadLegacyCollections();
     [[nodiscard]] AppearanceUnlockQueueResult OnItemAcquired(
         Player* player, Item* item, AppearanceUnlockTrigger trigger);
+    void OnQuestRewarded(Player* player, Quest const* quest,
+        AppearanceUnlockTrigger trigger = AppearanceUnlockTrigger::QuestReward);
+    void ScanRewardedQuests(Player* player);
     [[nodiscard]] AppearanceUnlockQueueResult QueueGameMasterUnlock(AccountId accountId,
         std::uint32_t characterGuid, std::uint32_t sourceItemId,
         std::uint32_t actorAccountId, std::uint32_t actorGuid);

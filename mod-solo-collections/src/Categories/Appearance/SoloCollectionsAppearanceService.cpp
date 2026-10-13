@@ -12,6 +12,7 @@
 #include "ObjectMgr.h"
 #include "Player.h"
 #include "QueryResult.h"
+#include "QuestDef.h"
 
 #include <algorithm>
 
@@ -95,6 +96,7 @@ void AppearanceService::OnPlayerLogin(Player* player)
         _inventoryReconcileElapsed[player->GetGUID().GetCounter()] = 0;
     }
     ScanHistoricalInventory(player);
+    ScanRewardedQuests(player);
 }
 
 void AppearanceService::OnPlayerUpdate(Player* player, std::uint32_t diff)
@@ -297,6 +299,30 @@ AppearanceUnlockQueueResult AppearanceService::OnItemAcquired(
 
     return QueueCanonicalUnlock(AccountId(player->GetSession()->GetAccountId()),
         player->GetGUID().GetCounter(), *sourceItemId, CollectionSourceKind::Gameplay, trigger);
+}
+
+void AppearanceService::OnQuestRewarded(
+    Player* player, Quest const* quest, AppearanceUnlockTrigger trigger)
+{
+    if (!sTransmogrification->GetUseCollectionSystem())
+        return;
+    (void)VisitRewardedQuestAppearanceSources(player, quest, [this, player, trigger](std::uint32_t itemId)
+    {
+        ItemTemplate const* source = sObjectMgr->GetItemTemplate(itemId);
+        if (!source || (source->Class != ITEM_CLASS_ARMOR && source->Class != ITEM_CLASS_WEAPON))
+            return;
+        (void)QueueCanonicalUnlock(AccountId(player->GetSession()->GetAccountId()),
+            player->GetGUID().GetCounter(), itemId, CollectionSourceKind::Gameplay, trigger);
+    });
+}
+
+void AppearanceService::ScanRewardedQuests(Player* player)
+{
+    if (!player || !player->GetSession() || !sTransmogrification->GetUseCollectionSystem())
+        return;
+    for (std::uint32_t questId : player->getRewardedQuests())
+        if (Quest const* quest = sObjectMgr->GetQuestTemplate(questId))
+            OnQuestRewarded(player, quest, AppearanceUnlockTrigger::HistoricalReconcile);
 }
 
 AppearanceUnlockQueueResult AppearanceService::QueueGameMasterUnlock(AccountId accountId,

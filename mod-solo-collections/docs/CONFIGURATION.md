@@ -91,6 +91,20 @@ contains `-w1`. Deploy the module before the wardrobe AddOn.
 
 ## Transmogrification
 
+In C++/SC2 mode, successful quest turn-in collects every catalogued fixed and
+choice reward appearance, including the alternatives the character did not pick
+or cannot equip. It grants appearances only; physical rewards are unchanged.
+The completion hook is checked against `IsQuestRewarded`, including repeatable
+quests. Login reconciles the character's server-owned rewarded history to recover
+older choices. Existing account unlocks are idempotent; historical reconciliation
+does not create a wall of "new appearance" badges. The inherited
+`RetroActiveAppearances` / reset flags do not limit this C++ reconciliation.
+
+This uses the existing account unlock queue and current AddOn type 13/20 updates.
+No database migration or matching client change is required. Rebuild the module
+to enable the new acquisition behavior; a source commit does not update a running
+server.
+
 The same template contains inherited, adapted transmogrification settings:
 
 - `Transmogrification.Enable`

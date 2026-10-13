@@ -143,13 +143,14 @@ SoloCollections.Transmog.MixedWeapons = family
 #        Default:     1
 #
 #    Transmogrification.RetroActiveAppearances
-#        Description: Enables/Disables checking all completed quests for uncollected appearances.
-#                     Occurs only once per player.
+#        Description: Legacy compatibility option. Cpp/SC2 reconciles fixed and
+#                     choice appearances from server-rewarded quest history at
+#                     every login; already collected appearances are skipped.
 #        Default:    1
 #
 #    Transmogrification.ResetRetroActiveAppearancesFlag
-#        Description: Resets the flag indicating whether the retroactive appearance check has been run.
-#                     Occurs for each character on log in.
+#        Description: Legacy compatibility option. Cpp/SC2 quest reconciliation
+#                     is idempotent and does not need this flag to be reset.
 #        Default:    0
 #
 #    Transmogrification.EnableTransmogInfo

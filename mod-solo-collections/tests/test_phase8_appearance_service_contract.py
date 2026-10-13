@@ -110,6 +110,7 @@ class AppearanceServiceContractTests(unittest.TestCase):
             "PLAYERHOOK_ON_EQUIP", "PLAYERHOOK_ON_LOOT_ITEM", "PLAYERHOOK_ON_CREATE_ITEM",
             "PLAYERHOOK_ON_STORE_NEW_ITEM", "PLAYERHOOK_ON_QUEST_REWARD_ITEM",
             "PLAYERHOOK_ON_AFTER_STORE_OR_EQUIP_NEW_ITEM", "PLAYERHOOK_ON_GROUP_ROLL_REWARD_ITEM",
+            "PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST",
         ):
             self.assertIn(hook, core)
         for trigger in (
@@ -134,14 +135,20 @@ class AppearanceServiceContractTests(unittest.TestCase):
         self.assertIn("PLAYERHOOK_ON_SAVE", core)
         self.assertIn("PLAYERHOOK_ON_AFTER_MOVE_ITEM_FROM_INVENTORY", core)
 
-    def test_only_the_reward_actually_granted_can_unlock_and_gm_uses_unified_queue(self):
+    def test_quest_choices_use_completed_history_and_gm_uses_unified_queue(self):
         core = (SRC / "SoloCollectionsCore.cpp").read_text(encoding="utf-8")
         legacy_scripts = (SRC / "transmog_scripts.cpp").read_text(encoding="utf-8")
         gm_commands = (SRC / "cs_transmog.cpp").read_text(encoding="utf-8")
         self.assertIn("OnPlayerQuestRewardItem", core)
+        self.assertIn("GetAppearanceService().OnQuestRewarded", core)
         self.assertNotIn("RewardChoiceItemId", legacy_scripts)
         self.assertNotIn("TryUnlockLegacy", legacy_scripts + gm_commands)
         self.assertIn("QueueGameMasterUnlock", gm_commands)
+        service = (APPEARANCE / "SoloCollectionsAppearanceService.cpp").read_text()
+        login = service.split("void AppearanceService::OnPlayerLogin", 1)[1].split("void AppearanceService::OnPlayerUpdate", 1)[0]
+        self.assertIn("ScanRewardedQuests(player)", login)
+        self.assertIn("player->getRewardedQuests()", service)
+        self.assertIn("OnQuestRewarded(player, quest, AppearanceUnlockTrigger::HistoricalReconcile)", service)
 
     def test_legacy_appearance_table_has_no_production_writer(self):
         production = "\n".join(

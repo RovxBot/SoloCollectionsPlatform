@@ -89,12 +89,18 @@ class TemplateSafetyContractTests(unittest.TestCase):
         self.assertIn("!itemTemplate", acquisition)
         self.assertIn("item->GetOwnerGUID() != player->GetGUID()", acquisition)
 
-    def test_quest_unlock_uses_only_the_item_actually_granted(self):
+    def test_all_quest_reward_appearances_require_rewarded_history(self):
         quest_hook = CORE.split("void OnPlayerQuestRewardItem", 1)[1].split(
             "void OnPlayerAfterStoreOrEquipNewItem", 1
         )[0]
         self.assertIn("AppearanceUnlockTrigger::QuestReward", quest_hook)
         self.assertNotIn("RewardChoiceItemId", SCRIPTS)
+        self.assertIn("PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST", CORE)
+        self.assertIn("GetAppearanceService().OnQuestRewarded(player, quest)", CORE)
+        acquisition = (ROOT / "src/Categories/Appearance/SoloCollectionsAppearanceAcquisition.h").read_text()
+        self.assertIn("!player->IsQuestRewarded(quest->GetQuestId())", acquisition)
+        self.assertIn("quest->RewardChoiceItemId", acquisition)
+        self.assertIn("quest->RewardItemId", acquisition)
 
     def test_item_links_mirror_images_and_portable_spell_are_null_safe(self):
         self.assertIn('return "(Unknown item: " + std::to_string(entry)', IMPLEMENTATION)

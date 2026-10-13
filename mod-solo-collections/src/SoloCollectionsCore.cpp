@@ -451,7 +451,7 @@ public:
     SoloCollectionsCorePlayerScript() : PlayerScript(
         "SoloCollectionsCorePlayerScript", { PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_LOGOUT, PLAYERHOOK_ON_SAVE,
             PLAYERHOOK_ON_UPDATE, PLAYERHOOK_ON_LEARN_SPELL, PLAYERHOOK_ON_STORE_NEW_ITEM,
-            PLAYERHOOK_ON_CREATE_ITEM, PLAYERHOOK_ON_QUEST_REWARD_ITEM,
+            PLAYERHOOK_ON_CREATE_ITEM, PLAYERHOOK_ON_QUEST_REWARD_ITEM, PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST,
             PLAYERHOOK_ON_AFTER_STORE_OR_EQUIP_NEW_ITEM, PLAYERHOOK_ON_EQUIP,
             PLAYERHOOK_ON_LOOT_ITEM, PLAYERHOOK_ON_GROUP_ROLL_REWARD_ITEM,
             PLAYERHOOK_ON_AFTER_MOVE_ITEM_FROM_INVENTORY,
@@ -563,13 +563,19 @@ public:
         OnAppearanceItem(player, item, AppearanceUnlockTrigger::Craft);
     }
 
+    void OnPlayerCompleteQuest(Player* player, Quest const* quest) override
+    {
+        if (IsCppBackendOwner())
+            GetAppearanceService().OnQuestRewarded(player, quest);
+    }
+
     void OnPlayerQuestRewardItem(Player* player, Item* item, std::uint32_t /*count*/) override
     {
         if (!IsCppBackendOwner())
             return;
         OnToyItem(player, item);
-        // This callback contains only the reward item actually granted; never
-        // infer ownership from every candidate in RewardChoiceItemId.
+        // This is the actual physical reward. All alternative appearances are
+        // handled separately after successful turn-in by OnPlayerCompleteQuest.
         OnAppearanceItem(player, item, AppearanceUnlockTrigger::QuestReward);
     }
 

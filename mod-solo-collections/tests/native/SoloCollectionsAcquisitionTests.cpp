@@ -1,8 +1,11 @@
 #include "Categories/Appearance/SoloCollectionsAppearanceAcquisition.h"
 
 #include <cstdint>
+#include <array>
 #include <iostream>
+#include <set>
 #include <stdexcept>
+#include <vector>
 
 namespace
 {
@@ -16,8 +19,19 @@ struct Player
 {
     bool HasSession = true;
     std::uint32_t Guid = 10;
+    std::set<std::uint32_t> Rewarded;
     void const* GetSession() const { return HasSession ? this : nullptr; }
     std::uint32_t GetGUID() const { return Guid; }
+    bool IsQuestRewarded(std::uint32_t id) const { return Rewarded.contains(id); }
+};
+
+struct Quest
+{
+    std::array<std::uint32_t, 4> RewardItemId { 105, 106, 0, 102 };
+    std::array<std::uint32_t, 4> RewardItemIdCount { 1, 1, 1, 1 };
+    std::array<std::uint32_t, 6> RewardChoiceItemId { 101, 102, 0, 103, 101, 104 };
+    std::array<std::uint32_t, 6> RewardChoiceItemCount { 1, 1, 1, 0, 1, 1 };
+    std::uint32_t GetQuestId() const { return 1000; }
 };
 
 struct ItemTemplate
@@ -57,6 +71,9 @@ int main()
     ItemTemplate food { 300, 0 };
     item.Template = &food;
     Require(!SoloCollections::FindAcquiredAppearanceSource(&player, &item, equipment), "non-equipment items must be rejected");
+    ItemTemplate invalid { 0, 4 };
+    item.Template = &invalid;
+    Require(!SoloCollections::FindAcquiredAppearanceSource(&player, &item, equipment), "zero source IDs must be rejected");
     item.Template = nullptr;
     Require(!SoloCollections::FindAcquiredAppearanceSource(&player, &item, equipment), "missing templates must be rejected");
     Require(!SoloCollections::FindAcquiredAppearanceSource(&player, static_cast<Item const*>(nullptr), equipment), "null items must be rejected");
@@ -64,5 +81,30 @@ int main()
     player.HasSession = false;
     item.Template = &armor;
     Require(!SoloCollections::FindAcquiredAppearanceSource(&player, &item, equipment), "a disconnected player cannot grant ownership");
+
+    Quest quest;
+    std::vector<std::uint32_t> rewards;
+    auto visit = [&rewards](std::uint32_t id) { rewards.push_back(id); };
+    player.HasSession = true;
+    Require(!SoloCollections::VisitRewardedQuestAppearanceSources(&player, &quest, visit),
+        "completed objectives without turn-in must not grant reward appearances");
+    Require(rewards.empty(), "an unrewarded quest must not enqueue any sources");
+    player.Rewarded.insert(quest.GetQuestId());
+    Require(SoloCollections::VisitRewardedQuestAppearanceSources(&player, &quest, visit), "rewarded quest was rejected");
+    Require(std::set<std::uint32_t>(rewards.begin(), rewards.end()) == std::set<std::uint32_t> { 101, 102, 104, 105, 106 },
+        "fixed rewards and every positive-count reward choice must be visited");
+    Require(rewards.size() == 5, "duplicate/empty/zero-count rewards must not enqueue extra sources");
+    rewards.clear();
+    Require(SoloCollections::VisitRewardedQuestAppearanceSources(&player, &quest, visit) && rewards.size() == 5,
+        "existing rewarded history must be usable for login reconciliation");
+    player.HasSession = false;
+    rewards.clear();
+    Require(!SoloCollections::VisitRewardedQuestAppearanceSources(&player, &quest, visit) && rewards.empty(),
+        "disconnected quest owners must not grant appearances");
+    Require(!SoloCollections::VisitRewardedQuestAppearanceSources(static_cast<Player const*>(nullptr), &quest, visit),
+        "null quest players must be rejected");
+    player.HasSession = true;
+    Require(!SoloCollections::VisitRewardedQuestAppearanceSources(&player, static_cast<Quest const*>(nullptr), visit),
+        "null quest templates must be rejected");
     std::cout << "SoloCollections appearance acquisition tests passed\n";
 }
