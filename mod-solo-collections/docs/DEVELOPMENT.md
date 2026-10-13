@@ -62,6 +62,12 @@ The runtime `.solocollections status` and startup log expose the exact values.
 
 ## Evidence language
 
+Run `python tools/check_portable.py` for the wardrobe/security contracts and
+portable C++20 domain/protocol executables. It uses the native CMake target source
+lists, builds in a temporary directory with warnings treated as errors, and does
+not access a game installation, database or running server. This does not replace
+an AzerothCore integration build or real-client acceptance.
+
 Report these independently:
 
 - **source/static**: review, generated consistency, diff checks;

@@ -69,7 +69,7 @@ void TestGoldenCodecVectors()
     Require(SC::Sc2Adler32Hex("1:4e6577:-,2,-,-,-,-,-,-,-,-,-,-,-,-") == "854c06cf",
         "outfit payload checksum vector changed");
 
-    for (std::string const& invalid : {
+    for (std::string const invalid : {
         "H|1|ABCDEF0123456789|dev|1|1",
         "D|0123456789abcdef|1|0002|A|1",
         "C|0123456789abcdef|1|1|bad payload",

@@ -32,7 +32,8 @@ class OutfitContractTests(unittest.TestCase):
         self.assertNotRegex(SCRIPTS, r"REPLACE INTO `custom_transmogrification_sets`")
 
     def test_slot_count_bounds_duplicates_and_entries_fail_closed(self):
-        self.assertIn("outfitId >= sTransmogrification->GetMaxSets()", SERVICE)
+        self.assertIn("outfitId < sTransmogrification->GetMaxSets()", SERVICE)
+        self.assertIn("outfits.size() >= sTransmogrification->GetMaxSets()", SERVICE)
         self.assertIn("OutfitSlotMaxCount = 19", HEADER)
         self.assertIn("rawSlot >= EQUIPMENT_SLOT_END", SERVICE)
         self.assertIn("appearances.size() >= OutfitSlotMaxCount", SERVICE)

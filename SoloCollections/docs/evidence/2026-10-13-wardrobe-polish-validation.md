@@ -30,6 +30,12 @@ tracking, authoritative partial-set drafts and manual saved-look previews.
 These are source/portable results, not server, game-client or visual acceptance.
 The broader historical catalogue/release suites are outside this focused gate.
 
+The module's `python tools/check_portable.py` also passes: 31 wardrobe/security
+contracts and both portable domain/protocol executables built with C++20 and
+warnings treated as errors. Obsolete comment-text assertions were replaced by
+checks for the actual failure/guard branches; the protocol test's temporary-string
+loop now uses an explicit value. No server billing or gameplay implementation changed.
+
 ## Required real-client acceptance
 
 | Case | Expected result |

@@ -97,7 +97,7 @@ class TemplateSafetyContractTests(unittest.TestCase):
         self.assertIn('return "(Unknown item: " + std::to_string(entry)', IMPLEMENTATION)
         self.assertIn("if (ItemTemplate const* sourceTemplate = sObjectMgr->GetItemTemplate(entry))", SCRIPTS)
         self.assertIn("PetEntry = 0;", IMPLEMENTATION)
-        self.assertIn("Portable NPC spell", IMPLEMENTATION)
+        self.assertIn("if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(PetSpellId))", IMPLEMENTATION)
 
 
 class AtomicApplyContractTests(unittest.TestCase):
@@ -143,7 +143,6 @@ class AtomicApplyContractTests(unittest.TestCase):
         self.assertLess(db_success, commit.index("ApplyCommittedFakeEntry"))
         self.assertIn("EnqueueDbCommit", commit)
         self.assertIn("LANG_TRANSMOG_DATABASE_ERROR", commit)
-        self.assertIn("no resources or cache entries were changed", commit)
 
     def test_gossip_confirmation_does_not_precharge_money(self):
         gossip_menu = SCRIPTS.split(
@@ -205,7 +204,10 @@ class AtomicReloadContractTests(unittest.TestCase):
         self.assertIn("UNION ALL", load)
         self.assertIn("if (!result)", load)
         self.assertIn("AppearanceRepositoryHealth::QueryFailed", load)
-        self.assertIn("previous_accounts", load)
+        failed = load[load.index("if (!result)"):load.index("LegacyCollectionCache refreshed")]
+        self.assertIn("return false", failed)
+        self.assertNotIn("_legacyCollections.clear()", failed)
+        self.assertNotIn("_legacyCollections.swap", failed)
 
     def test_successful_reload_replaces_snapshot_and_removes_revoked_rows(self):
         load = APPEARANCE_SERVICE.split("bool AppearanceService::LoadLegacyCollections()", 1)[1].split(
