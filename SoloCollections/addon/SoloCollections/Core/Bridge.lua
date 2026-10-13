@@ -24,6 +24,7 @@ B.sc2Attempted = false
 B.stateListeners = B.stateListeners or {}
 
 local requestTimeout = 5
+local wardrobeWriteTimeout = 60
 local requestSerial = 0
 local pendingSummons = {}
 local pendingPetSummons = {}
@@ -196,10 +197,19 @@ local function expirePendingRequests(now)
         end
     end
     for requestId, pending in pairs(sc2PendingActions) do
+        local wardrobeWrite = pending.kind == "WARDROBE" or pending.typeId == 19
+        if wardrobeWrite and not pending.delayed
+            and now >= pending.startedAt + requestTimeout then
+            pending.delayed = true
+            notifyStateListeners(CS.GetState(), pending.typeId, {
+                kind = "ACTION_PENDING", requestId = requestId,
+            })
+            if CS.requestResync then CS.requestResync("TRANSFER_TIMEOUT", pending.typeId, now) end
+        end
         if now >= pending.deadline then
             sc2PendingActions[requestId] = nil
             if type(pending.callback) == "function" then
-                pcall(pending.callback, false, "TIMEOUT")
+                pcall(pending.callback, false, wardrobeWrite and "UNCONFIRMED" or "TIMEOUT")
             end
         end
     end
@@ -331,7 +341,8 @@ function B.RequestSC2Action(typeId, collectionId, actionId, target, callback)
     requestSerial = requestSerial + 1
     local requestId = requestSerial
     sc2PendingActions[requestId] = {
-        deadline = GetTime() + requestTimeout,
+        startedAt = GetTime(),
+        deadline = GetTime() + (typeId == 19 and wardrobeWriteTimeout or requestTimeout),
         typeId = typeId,
         collectionId = collectionId,
         callback = callback,
@@ -632,7 +643,8 @@ local function sendSC2Body(body, pending)
     end
     requestSerial = requestSerial + 1
     local requestId = requestSerial
-    pending.deadline = GetTime() + requestTimeout
+    pending.startedAt = GetTime()
+    pending.deadline = pending.startedAt + (pending.kind == "WARDROBE" and wardrobeWriteTimeout or requestTimeout)
     sc2PendingActions[requestId] = pending
     SendAddonMessage(B.sc2Prefix, body, "WHISPER", playerName)
     return requestId

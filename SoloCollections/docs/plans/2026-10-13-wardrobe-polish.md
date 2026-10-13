@@ -9,7 +9,10 @@ or switch automatically. Each implementation is a separate commit on `main`.
 1. Quote consistency: invalidate prices immediately when drafts change, disable
    Apply until the exact draft is priced, and refresh after confirmation. A changed
    price or equipment requires a new confirmation. Lua behavioral harness added.
-2. Delayed action feedback and reconciliation.
+2. Delayed action feedback: retain write callbacks for 60 seconds, show a waiting
+   state after five seconds, request an authoritative read resync and never retry
+   a paid write automatically. An unconfirmed result is not described as failure.
+   Draft-changing actions stay blocked while an application is pending.
 3. Equipment-change preview/tooltip trust, including copies of the same item.
 4. Localized journal labels, readable cold-cache fallback names and item-ID search.
 5. Favorites filtering and browsing position retention.

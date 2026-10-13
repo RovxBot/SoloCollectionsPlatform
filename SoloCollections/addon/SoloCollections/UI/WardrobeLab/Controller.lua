@@ -59,7 +59,9 @@ function Lab.CreatePage(parent)
         local text = STATUS_TEXT[request.status] or STATUS_TEXT.IDLE
         local textIsBlockReason = false
         if request.status == "REQUESTING" then
-            if request.kind == "CLEAR" then
+            if request.delayed then
+                text = L("Still waiting for server confirmation…", "仍在等待服务端确认…")
+            elseif request.kind == "CLEAR" then
                 text = L("Restoring original equipment appearance…", "正在恢复原装备外观…")
             elseif request.kind == "SET" then
                 text = L("Applying outfit set…", "正在应用套装…")
@@ -90,8 +92,8 @@ function Lab.CreatePage(parent)
         elseif request.status == "FAILED" and request.reason then
             local reasonText = Lab.ApplyReasonText and Lab.ApplyReasonText(request.reason)
                 or STATUS_REASON_TEXT[request.reason] or tostring(request.reason)
-            text = text .. L(": ", "：") .. reasonText
-            textIsBlockReason = true
+            text = request.reason == "UNCONFIRMED" and reasonText or text .. L(": ", "：") .. reasonText
+            textIsBlockReason = request.reason ~= "UNCONFIRMED"
         end
         self.scStateText:SetText(text)
         if textIsBlockReason then
@@ -173,7 +175,12 @@ function Lab.CreatePage(parent)
         end)
     end
     if SC.Bridge and SC.Bridge.RegisterStateListener then
-        page.scAppliedListener = SC.Bridge.RegisterStateListener(function(_, typeId)
+        page.scAppliedListener = SC.Bridge.RegisterStateListener(function(_, typeId, change)
+            if change and change.kind == "ACTION_PENDING" and state.requestState
+                and state.requestState.requestId == change.requestId then
+                state.requestState.delayed = true
+                state:Notify("REQUEST_RESULT")
+            end
             if tonumber(typeId) ~= 18 then return end
             if page:IsShown() then
                 scheduleRefresh(page, 3)

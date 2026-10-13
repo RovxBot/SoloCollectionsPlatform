@@ -112,6 +112,8 @@ Lab.APPLY_REASON_TEXT = {
     INVALID_REQUEST = L("Invalid request.", "请求无效。"),
     REQUEST_NOT_SENT = L("The request could not be sent.", "请求未能发出。"),
     REQUEST_PENDING = L("An apply request is already being processed.", "已有应用请求正在处理。"),
+    UNCONFIRMED = L("The server has not confirmed the result. Check your equipment before trying again.", "服务端尚未确认结果，请检查装备后再尝试。"),
+    TIMEOUT = L("The server did not return a price. Select the appearance again to retry.", "服务端未返回报价，请重新选择外观再试。"),
     BRIDGE_UNAVAILABLE = L("The transmogrification service is not ready. Try again shortly.", "幻化服务尚未就绪，请稍后再试。"),
     NO_PRESET = L("Select an outfit preset first.", "先选择一套套装预设。"),
 }
@@ -598,6 +600,7 @@ function State:SelectSlot(slotKey)
 end
 
 function State:SetDraft(slotKey, record)
+    if self.requestState.status == "REQUESTING" then return false, "REQUEST_PENDING" end
     if not Lab.SLOT_BY_KEY[slotKey] or type(record) ~= "table" then return false end
     if not self:IsSlotOccupied(slotKey) then return false, "INVALID_TARGET_SLOT" end
     self.presetRecord = nil
@@ -612,6 +615,7 @@ function State:SetDraft(slotKey, record)
 end
 
 function State:SetPreset(record)
+    if self.requestState.status == "REQUESTING" then return false, "REQUEST_PENDING" end
     if type(record) ~= "table" then return false end
     self.draftBySlot, self.dirtySlots = {}, {}
     self.presetRecord = record
@@ -624,6 +628,7 @@ function State:SetPreset(record)
 end
 
 function State:ClearDraft(slotKey)
+    if self.requestState.status == "REQUESTING" then return false, "REQUEST_PENDING" end
     if slotKey then
         self.draftBySlot[slotKey], self.dirtySlots[slotKey] = nil, nil
     else
@@ -1525,6 +1530,7 @@ function State:RenameOutfit(uid, name)
 end
 
 function State:LoadOutfit(outfit)
+    if self.requestState.status == "REQUESTING" then return false, "REQUEST_PENDING" end
     if type(outfit) ~= "table" or type(outfit.slots) ~= "table" then return false, "INVALID_OUTFIT" end
     self.presetRecord = nil
     self.draftBySlot, self.dirtySlots = {}, {}
@@ -1637,6 +1643,9 @@ function State:ClearApplied(slotKey)
             self:Notify("REQUEST_RESULT")
         end
     end)
+    if self.requestState and self.requestState.token == requestToken then
+        self.requestState.requestId = requestId
+    end
     if not requestId and self.requestState and self.requestState.token == requestToken
         and self.requestState.status == "REQUESTING" then
         self.requestState.status, self.requestState.reason = "FAILED", "REQUEST_NOT_SENT"
