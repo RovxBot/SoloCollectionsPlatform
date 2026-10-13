@@ -1,5 +1,6 @@
 local SC = SoloCollections
 local UI = SC.UI
+local L = SC.Localize
 local Catalog = SC.Catalog
 local Identity = SC.IdentityRegistry
 local EzModel = SC.EzWardrobe.Model
@@ -25,17 +26,17 @@ local DRAG_ROTATION_CONSTANT = tonumber(MODELFRAME_DRAG_ROTATION_CONSTANT) or 0.
 local function showAppearanceActionResult(ok, reason)
     local message
     if ok then
-        message = "外观已应用。"
+        message = L("Appearance applied.", "外观已应用。")
     elseif reason == "NOT_ENOUGH_MONEY" then
-        message = "你没有足够的钱。"
+        message = L("Not enough gold.", "你没有足够的钱。")
     elseif reason == "NOT_ENOUGH_TOKENS" then
-        message = "你的筹码不够。"
+        message = L("Not enough tokens.", "你的筹码不够。")
     elseif reason == "NOT_OWNED" then
-        message = "尚未收藏此外观。"
+        message = L("You have not collected this appearance.", "尚未收藏此外观。")
     elseif reason == "INVALID_TARGET_SLOT" then
-        message = "对应装备栏没有可幻化物品。"
+        message = L("There is no item equipped in this slot.", "对应装备栏没有可幻化物品。")
     else
-        message = "外观应用失败：" .. tostring(reason or "UNKNOWN")
+        message = L("Application failed: ", "外观应用失败：") .. tostring(reason or "UNKNOWN")
     end
     if UIErrorsFrame and UIErrorsFrame.AddMessage then
         UIErrorsFrame:AddMessage(message, ok and 0.35 or 1, ok and 1 or 0.35, 0.2, 1)
@@ -47,21 +48,21 @@ end
 local function showSetActionResult(ok, reason)
     local message
     if ok then
-        message = "套装外观已原子应用。"
+        message = L("Set appearance applied.", "套装外观已原子应用。")
     elseif reason == "NOT_OWNED" then
-        message = "尚未收集完整套装。"
+        message = L("You have not collected the complete set.", "尚未收集完整套装。")
     elseif reason == "INVALID_TARGET_SLOT" then
-        message = "需要先在套装的每个目标栏位装备物品。"
+        message = L("Equip an item in each required slot first.", "需要先在套装的每个目标栏位装备物品。")
     elseif reason == "CLASS_RESTRICTED" then
-        message = "当前角色无法使用这个套装外观。"
+        message = L("This character cannot use this set.", "当前角色无法使用这个套装外观。")
     elseif reason == "NOT_ENOUGH_MONEY" then
-        message = "你没有足够的钱。"
+        message = L("Not enough gold.", "你没有足够的钱。")
     elseif reason == "NOT_ENOUGH_TOKENS" then
-        message = "你的筹码不够。"
+        message = L("Not enough tokens.", "你的筹码不够。")
     elseif reason == "BRIDGE_UNAVAILABLE" then
-        message = "统一收藏服务尚未就绪。"
+        message = L("The collection service is not ready.", "统一收藏服务尚未就绪。")
     else
-        message = "套装应用失败：" .. tostring(reason or "UNKNOWN")
+        message = L("Set application failed: ", "套装应用失败：") .. tostring(reason or "UNKNOWN")
     end
     if UIErrorsFrame and UIErrorsFrame.AddMessage then
         UIErrorsFrame:AddMessage(message, ok and 0.35 or 1, ok and 1 or 0.35, 0.2, 1)
@@ -99,18 +100,18 @@ local CLASS_FILTERS = Identity.GetClassFilterOptions()
 local ARMOR_TYPE_FILTERS = SC.EzWardrobe.DataProvider.ARMOR_OPTIONS
 
 local SLOT_FILTERS = {
-    { key = "HEAD", label = "头部", atlas = "head" },
-    { key = "SHOULDER", label = "肩部", atlas = "shoulder" },
-    { key = "BACK", label = "背部", atlas = "back" },
-    { key = "CHEST", label = "胸部", atlas = "chest" },
-    { key = "WRIST", label = "手腕", atlas = "wrist", gapAfter = 18 },
-    { key = "HANDS", label = "手部", atlas = "hands" },
-    { key = "WAIST", label = "腰部", atlas = "waist" },
-    { key = "LEGS", label = "腿部", atlas = "legs" },
-    { key = "FEET", label = "脚部", atlas = "feet", gapAfter = 18 },
-    { key = "MAINHAND", label = "主手武器", atlas = "mainhand" },
-    { key = "OFFHAND", label = "副手武器", atlas = "secondaryhand" },
-    { key = "RANGED", label = "远程武器", paperDoll = "Interface\\PaperDoll\\UI-PaperDoll-Slot-Ranged" },
+    { key = "HEAD", label = L("Head", "头部"), atlas = "head" },
+    { key = "SHOULDER", label = L("Shoulder", "肩部"), atlas = "shoulder" },
+    { key = "BACK", label = L("Back", "背部"), atlas = "back" },
+    { key = "CHEST", label = L("Chest", "胸部"), atlas = "chest" },
+    { key = "WRIST", label = L("Wrist", "手腕"), atlas = "wrist", gapAfter = 18 },
+    { key = "HANDS", label = L("Hands", "手部"), atlas = "hands" },
+    { key = "WAIST", label = L("Waist", "腰部"), atlas = "waist" },
+    { key = "LEGS", label = L("Legs", "腿部"), atlas = "legs" },
+    { key = "FEET", label = L("Feet", "脚部"), atlas = "feet", gapAfter = 18 },
+    { key = "MAINHAND", label = L("Main Hand", "主手武器"), atlas = "mainhand" },
+    { key = "OFFHAND", label = L("Off Hand", "副手武器"), atlas = "secondaryhand" },
+    { key = "RANGED", label = L("Ranged", "远程武器"), paperDoll = "Interface\\PaperDoll\\UI-PaperDoll-Slot-Ranged" },
 }
 
 local SLOT_ATLAS_SIZE = 512
@@ -136,24 +137,24 @@ local ROUND_HIGHLIGHT_REGION = { 42, 78, 176, 212 }
 -- Warglaive models retain their own camera key, but filter as one-handed
 -- swords because WotLK has no separate warglaive weapon subclass.
 local WEAPON_FILTERS = {
-    { key = "ONE_HAND_AXE", label = "单手斧", main = true, off = true },
-    { key = "TWO_HAND_AXE", label = "双手斧", main = true },
-    { key = "BOW", label = "弓", ranged = true },
-    { key = "GUN", label = "枪械", ranged = true },
-    { key = "ONE_HAND_MACE", label = "单手锤", main = true, off = true },
-    { key = "TWO_HAND_MACE", label = "双手锤", main = true },
-    { key = "POLEARM", label = "长柄武器", main = true },
-    { key = "ONE_HAND_SWORD", label = "单手剑", main = true, off = true },
-    { key = "TWO_HAND_SWORD", label = "双手剑", main = true },
-    { key = "STAFF", label = "法杖", main = true },
-    { key = "FIST_WEAPON", label = "拳套", main = true, off = true },
-    { key = "DAGGER", label = "匕首", main = true, off = true },
-    { key = "THROWN", label = "投掷武器", ranged = true },
-    { key = "CROSSBOW", label = "弩", ranged = true },
-    { key = "WAND", label = "魔杖", ranged = true },
-    { key = "FISHING_POLE", label = "钓鱼竿", main = true },
-    { key = "SHIELD", label = "盾牌", off = true },
-    { key = "OFFHAND_ITEM", label = "副手物品", off = true },
+    { key = "ONE_HAND_AXE", label = L("One-Handed Axes", "单手斧"), main = true, off = true },
+    { key = "TWO_HAND_AXE", label = L("Two-Handed Axes", "双手斧"), main = true },
+    { key = "BOW", label = L("Bows", "弓"), ranged = true },
+    { key = "GUN", label = L("Guns", "枪械"), ranged = true },
+    { key = "ONE_HAND_MACE", label = L("One-Handed Maces", "单手锤"), main = true, off = true },
+    { key = "TWO_HAND_MACE", label = L("Two-Handed Maces", "双手锤"), main = true },
+    { key = "POLEARM", label = L("Polearms", "长柄武器"), main = true },
+    { key = "ONE_HAND_SWORD", label = L("One-Handed Swords", "单手剑"), main = true, off = true },
+    { key = "TWO_HAND_SWORD", label = L("Two-Handed Swords", "双手剑"), main = true },
+    { key = "STAFF", label = L("Staves", "法杖"), main = true },
+    { key = "FIST_WEAPON", label = L("Fist Weapons", "拳套"), main = true, off = true },
+    { key = "DAGGER", label = L("Daggers", "匕首"), main = true, off = true },
+    { key = "THROWN", label = L("Thrown", "投掷武器"), ranged = true },
+    { key = "CROSSBOW", label = L("Crossbows", "弩"), ranged = true },
+    { key = "WAND", label = L("Wands", "魔杖"), ranged = true },
+    { key = "FISHING_POLE", label = L("Fishing Poles", "钓鱼竿"), main = true },
+    { key = "SHIELD", label = L("Shields", "盾牌"), off = true },
+    { key = "OFFHAND_ITEM", label = L("Held in Off-Hand", "副手物品"), off = true },
 }
 
 local STANDALONE_ITEM_SLOTS = {
@@ -185,7 +186,7 @@ for _, option in ipairs(SLOT_FILTERS) do
 end
 
 local function slotLabelFromKey(slotKey)
-    return SLOT_LABEL_BY_KEY[tostring(slotKey or "")] or tostring(slotKey or "未知部位")
+    return SLOT_LABEL_BY_KEY[tostring(slotKey or "")] or tostring(slotKey or L("Unknown slot", "未知部位"))
 end
 
 local function filterLabel(options, current)
@@ -208,7 +209,7 @@ local function classLabelFromKey(classKey)
     if classKey and classKey ~= "ALL" and Identity.GetClassByKey then
         local classIdentity = Identity.GetClassByKey(classKey)
         if classIdentity and classIdentity.known then
-            return (classIdentity.name and (classIdentity.name.zhCN or classIdentity.name.enUS))
+            return (classIdentity.name and L(classIdentity.name.enUS, classIdentity.name.zhCN))
                 or classIdentity.filterToken
                 or tostring(classKey)
         end
@@ -513,7 +514,7 @@ local function setVariantLabel(record)
     if info and info.variantLabel and info.variantLabel ~= "" then
         return info.variantLabel
     end
-    return tostring(record and record.name or "未知版本")
+    return tostring(record and record.name or L("Unknown variant", "未知版本"))
 end
 
 local SPEC_SPLIT_CLASSES = {
@@ -866,30 +867,30 @@ local function showItemTooltip(owner, record)
     end
     local itemName, _, quality = GetItemInfo(record.itemId)
     local red, green, blue = itemQualityColor(quality or record.quality)
-    local title = itemName or record.name or "未知外观"
+    local title = itemName or record.name or L("Unknown appearance", "未知外观")
 
     GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
     GameTooltip:SetText(title, red, green, blue)
 
-    local equipmentSourceText = meaningfulAppearanceSource(record.source) or "获取方式未记录"
+    local equipmentSourceText = meaningfulAppearanceSource(record.source) or L("Source not recorded", "获取方式未记录")
     if equipmentSourceText then
-        GameTooltip:AddLine("装备来源：" .. equipmentSourceText, red, green, blue, true)
+        GameTooltip:AddLine(L("Source: ", "装备来源：") .. equipmentSourceText, red, green, blue, true)
     end
 
     local slotLabel = slotLabelFromKey(record.slot)
     if slotLabel and slotLabel ~= "" then
-        GameTooltip:AddLine("部位：" .. slotLabel, 0.82, 0.78, 0.70)
+        GameTooltip:AddLine(L("Slot: ", "部位：") .. slotLabel, 0.82, 0.78, 0.70)
     end
     local armorTypeLabel = armorTypeLabelFromKey(record.armorType)
     if armorTypeLabel then
-        GameTooltip:AddLine("护甲类型：" .. armorTypeLabel, 0.82, 0.78, 0.70)
+        GameTooltip:AddLine(L("Armor type: ", "护甲类型：") .. armorTypeLabel, 0.82, 0.78, 0.70)
     end
     local weaponTypeLabel = record.weaponTypeLabel or weaponTypeLabelFromKey(record.weaponCategory or record.weaponType)
     if weaponTypeLabel then
-        GameTooltip:AddLine("武器类型：" .. weaponTypeLabel, 0.52, 0.82, 1.00, true)
+        GameTooltip:AddLine(L("Weapon type: ", "武器类型：") .. weaponTypeLabel, 0.52, 0.82, 1.00, true)
     end
 
-    GameTooltip:AddLine(record.collected and "已收集" or "未收集 · 仍可预览", record.collected and 0.38 or 0.62, record.collected and 0.90 or 0.58, 0.32)
+    GameTooltip:AddLine(record.collected and L("Collected", "已收集") or L("Not collected · Available to preview", "未收集 · 仍可预览"), record.collected and 0.38 or 0.62, record.collected and 0.90 or 0.58, 0.32)
     GameTooltip:Show()
 end
 
@@ -928,36 +929,36 @@ local function showPieceTooltip(owner, itemId, setRecord, previewItem, displayRe
     local sourceCount = sourceItemIds and #sourceItemIds or 0
 
     GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-    GameTooltip:SetText(itemName or ("套装部件 #" .. tostring(itemId)), red, green, blue)
-    GameTooltip:AddLine("套装：" .. setDisplayName(displayRecord), 0.95, 0.82, 0.36, true)
+    GameTooltip:SetText(itemName or (L("Set piece #", "套装部件 #") .. tostring(itemId)), red, green, blue)
+    GameTooltip:AddLine(L("Set: ", "套装：") .. setDisplayName(displayRecord), 0.95, 0.82, 0.36, true)
 
     local slotLabel = slotLabelFromKey(previewItem and previewItem.slotKey or (owner and owner.scSlotKey))
     if slotLabel and slotLabel ~= "" then
-        GameTooltip:AddLine("部位：" .. slotLabel, 0.82, 0.78, 0.70)
+        GameTooltip:AddLine(L("Slot: ", "部位：") .. slotLabel, 0.82, 0.78, 0.70)
     end
 
     local factionLabel = setRecordFactionLabel(setRecord)
     if factionLabel then
-        GameTooltip:AddLine("阵营：" .. factionLabel, 0.65, 0.78, 0.92)
+        GameTooltip:AddLine(L("Faction: ", "阵营：") .. factionLabel, 0.65, 0.78, 0.92)
     end
 
     local categoryLabel = setRecordCategoryLabel(setRecord)
     if categoryLabel and not setRecordIsClassSpecific(setRecord) then
-        GameTooltip:AddLine("类型：" .. categoryLabel, 0.82, 0.78, 0.70)
+        GameTooltip:AddLine(L("Type: ", "类型：") .. categoryLabel, 0.82, 0.78, 0.70)
     end
 
     local specLabel = setRecordSpecLabel(setRecord)
     if specLabel then
-        GameTooltip:AddLine("适用专精：" .. specLabel, 0.52, 0.82, 1.00, true)
+        GameTooltip:AddLine(L("Specialization: ", "适用专精：") .. specLabel, 0.52, 0.82, 1.00, true)
     end
 
     local sourceLabel = setRecordSourceLabel(setRecord)
     if sourceLabel then
-        GameTooltip:AddLine("来源：" .. sourceLabel, 0.94, 0.82, 0.58, true)
+        GameTooltip:AddLine(L("Source: ", "来源：") .. sourceLabel, 0.94, 0.82, 0.58, true)
     end
 
     local collected = owner and owner.scCollected
-    GameTooltip:AddLine(collected and "已收集外观" or "未收集 · 仍可预览", collected and 0.38 or 0.62, collected and 0.90 or 0.58, 0.32)
+    GameTooltip:AddLine(collected and L("Collected appearance", "已收集外观") or L("Not collected · Available to preview", "未收集 · 仍可预览"), collected and 0.38 or 0.62, collected and 0.90 or 0.58, 0.32)
     if sourceCount > 1 then
         GameTooltip:AddLine("Alt + 左键：切换同部位来源（" .. tostring(sourceCount) .. " 个）", 1.00, 0.82, 0.18)
     end
@@ -1305,7 +1306,7 @@ function UI.CreateWardrobePage(parent)
     clearNew:SetWidth(128)
     clearNew:SetHeight(20)
     clearNew:SetPoint("TOPLEFT", filterBar, "TOPLEFT", 8, -50)
-    clearNew:SetText("清除全部新获得")
+    clearNew:SetText(L("Clear All New Appearances", "清除全部新获得"))
     clearNew:Hide()
     clearNew:SetScript("OnClick", function()
         if SC.NewAppearances and SC.NewAppearances.ClearAll then
@@ -1372,13 +1373,13 @@ function UI.CreateWardrobePage(parent)
     reset:SetWidth(104)
     reset:SetHeight(25)
     reset:SetPoint("BOTTOMRIGHT", preview, "BOTTOMRIGHT", -14, 13)
-    reset:SetText("重置视角")
+    reset:SetText(L("Reset View", "重置视角"))
 
     local applySet = CreateFrame("Button", nil, preview, "UIPanelButtonTemplate")
     applySet:SetWidth(104)
     applySet:SetHeight(25)
     applySet:SetPoint("RIGHT", reset, "LEFT", -8, 0)
-    applySet:SetText("应用套装")
+    applySet:SetText(L("Apply Set", "应用套装"))
     applySet:Disable()
     applySet:Hide()
     page.scApplySet = applySet
@@ -1701,7 +1702,7 @@ function UI.CreateWardrobePage(parent)
         if displayRecord and displayRecord.scIsSetGroup and variantCount > 1 then
             variantDropdown.scSetGroupRecord = displayRecord
             UIDropDownMenu_SetSelectedValue(variantDropdown, selectedRecord and selectedRecord.id)
-            UIDropDownMenu_SetText(variantDropdown, selectedRecord and setVariantLabel(selectedRecord) or "版本")
+            UIDropDownMenu_SetText(variantDropdown, selectedRecord and setVariantLabel(selectedRecord) or L("Variant", "版本"))
             variantDropdown:Show()
         else
             variantDropdown.scSetGroupRecord = nil
@@ -1737,21 +1738,21 @@ function UI.CreateWardrobePage(parent)
         local presentationLabel = setPresentationLabel(record)
         local detailParts = {}
         if presentationLabel then
-            detailParts[#detailParts + 1] = "分类：" .. presentationLabel
+            detailParts[#detailParts + 1] = L("Category: ", "分类：") .. presentationLabel
         end
         local categoryLabel = setRecordCategoryLabel(record)
         if categoryLabel and not setRecordIsClassSpecific(record) then
-            detailParts[#detailParts + 1] = "类型：" .. categoryLabel
+            detailParts[#detailParts + 1] = L("Type: ", "类型：") .. categoryLabel
         else
-            detailParts[#detailParts + 1] = "职业：" .. setClassLabel(record)
+            detailParts[#detailParts + 1] = L("Class: ", "职业：") .. setClassLabel(record)
         end
         local specLabel = setRecordSpecLabel(record)
         if specLabel then
-            detailParts[#detailParts + 1] = "专精：" .. specLabel
+            detailParts[#detailParts + 1] = L("Specialization: ", "专精：") .. specLabel
         end
         local factionLabel = setRecordFactionLabel(record)
         if factionLabel then
-            detailParts[#detailParts + 1] = "阵营：" .. factionLabel
+            detailParts[#detailParts + 1] = L("Faction: ", "阵营：") .. factionLabel
         end
         detail:SetText(table.concat(detailParts, "  ·  "))
         local pieceState = deriveSetPieceState(record)
@@ -1797,7 +1798,7 @@ function UI.CreateWardrobePage(parent)
         end
         local collectedPieces = tonumber(record.collectedCount) or 0
         local requiredPieces = tonumber(record.requiredCount) or #previewItems
-        setProgress:SetText("套装收集进度：" .. collectedPieces .. " / " .. requiredPieces)
+        setProgress:SetText(L("Set progress: ", "套装收集进度：") .. collectedPieces .. " / " .. requiredPieces)
         setProgress:Show()
     end
 
@@ -1943,8 +1944,8 @@ function UI.CreateWardrobePage(parent)
     setScrollbar:SetScript("OnMouseWheel", function(_, delta) scrollSetList(delta) end)
     setScrollbar:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("套装列表", 1.00, 0.82, 0.18)
-        GameTooltip:AddLine("拖动滚动条或使用鼠标滚轮浏览。", 0.82, 0.78, 0.70, true)
+        GameTooltip:SetText(L("Sets", "套装列表"), 1.00, 0.82, 0.18)
+        GameTooltip:AddLine(L("Drag the scrollbar or use the mouse wheel to browse.", "拖动滚动条或使用鼠标滚轮浏览。"), 0.82, 0.78, 0.70, true)
         GameTooltip:Show()
     end)
     setScrollbar:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -1979,28 +1980,28 @@ function UI.CreateWardrobePage(parent)
             GameTooltip:SetText(setDisplayName(record), red, green, blue)
             local presentationLabel = setPresentationLabel(concreteRecord)
             if presentationLabel then
-                GameTooltip:AddLine("分类：" .. presentationLabel, 0.95, 0.82, 0.36)
+                GameTooltip:AddLine(L("Category: ", "分类：") .. presentationLabel, 0.95, 0.82, 0.36)
             end
             local categoryLabel = setRecordCategoryLabel(concreteRecord)
             if categoryLabel and not setRecordIsClassSpecific(concreteRecord) then
-                GameTooltip:AddLine("类型：" .. categoryLabel, 0.82, 0.78, 0.70)
+                GameTooltip:AddLine(L("Type: ", "类型：") .. categoryLabel, 0.82, 0.78, 0.70)
             else
-                GameTooltip:AddLine("职业：" .. setClassLabel(concreteRecord), 0.82, 0.78, 0.70)
+                GameTooltip:AddLine(L("Class: ", "职业：") .. setClassLabel(concreteRecord), 0.82, 0.78, 0.70)
             end
             local specLabel = setRecordSpecLabel(concreteRecord)
             if specLabel then
-                GameTooltip:AddLine("适用专精：" .. specLabel, 0.52, 0.82, 1.00, true)
+                GameTooltip:AddLine(L("Specialization: ", "适用专精：") .. specLabel, 0.52, 0.82, 1.00, true)
             end
-            GameTooltip:AddLine("来源：" .. setRecordSourceLabel(concreteRecord), 0.94, 0.82, 0.58, true)
+            GameTooltip:AddLine(L("Source: ", "来源：") .. setRecordSourceLabel(concreteRecord), 0.94, 0.82, 0.58, true)
             if record.scIsSetGroup then
                 local variantCount = record.scVariants and #record.scVariants or 0
                 GameTooltip:AddLine("已折叠 " .. tostring(variantCount) .. " 个阵营版本；右下角下拉切换联盟/部落。", 0.78, 0.74, 0.64, true)
                 for _, variantRecord in ipairs(record.scVariants or {}) do
-                    GameTooltip:AddLine("· " .. setVariantLabel(variantRecord) .. "：" .. tostring(variantRecord.name or "未知版本"), 0.65, 0.78, 0.92, true)
+                    GameTooltip:AddLine("· " .. setVariantLabel(variantRecord) .. "：" .. tostring(variantRecord.name or L("Unknown variant", "未知版本")), 0.65, 0.78, 0.92, true)
                 end
             end
-            GameTooltip:AddLine("收集进度：" .. owned .. " / " .. required, 0.45, 0.90, 0.34)
-            GameTooltip:AddLine("左键选择 · 右键偏好", 0.78, 0.74, 0.64)
+            GameTooltip:AddLine(L("Collection progress: ", "收集进度：") .. owned .. " / " .. required, 0.45, 0.90, 0.34)
+            GameTooltip:AddLine(L("Left-click to select · Right-click to favorite", "左键选择 · 右键偏好"), 0.78, 0.74, 0.64)
             GameTooltip:Show()
         end)
         row:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -2024,10 +2025,10 @@ function UI.CreateWardrobePage(parent)
     setControls:SetPoint("BOTTOM", setsPanel, "BOTTOM", 0, 5)
     setControls:SetFrameLevel(preview:GetFrameLevel() + 1)
 
-    local itemEmpty = UI.CreateEmptyState(itemsPanel, "没有符合条件的外观")
+    local itemEmpty = UI.CreateEmptyState(itemsPanel, L("No matching appearances", "没有符合条件的外观"))
     itemEmpty:SetPoint("CENTER", itemsPanel, "CENTER", 0, 20)
     itemEmpty:Hide()
-    local setEmpty = UI.CreateEmptyState(setsPanel, "没有符合条件的套装")
+    local setEmpty = UI.CreateEmptyState(setsPanel, L("No matching sets", "没有符合条件的套装"))
     setEmpty:SetPoint("CENTER", setsPanel, "CENTER", 0, 20)
     setEmpty:Hide()
 
@@ -2136,8 +2137,8 @@ function UI.CreateWardrobePage(parent)
         UIDropDownMenu_Initialize(dropDown, function(_, level)
             if level == 1 then
                 local options = {
-                    { label = "已收集", key = "collected" },
-                    { label = "未收集", key = "uncollected" },
+                    { label = L("Collected", "已收集"), key = "collected" },
+                    { label = L("Not Collected", "未收集"), key = "uncollected" },
                 }
                 for _, option in ipairs(options) do
                     local optionKey = option.key
@@ -2151,7 +2152,7 @@ function UI.CreateWardrobePage(parent)
                 end
                 if SC.db.wardrobeTab == "ITEMS" then
                     local sources = UIDropDownMenu_CreateInfo()
-                    sources.text = "来源"
+                    sources.text = L("Sources", "来源")
                     sources.notCheckable = true
                     sources.hasArrow = true
                     sources.value = "appearanceSources"
@@ -2195,7 +2196,7 @@ function UI.CreateWardrobePage(parent)
         page.scItemRevision = itemDataProvider:GetRevision()
         if UI.CollectionsFrame then UI.CollectionsFrame.scProgress:SetProgress(collected, total) end
         if #records == 0 then
-            UI.ShowEmptyState(itemEmpty, page, "没有符合条件的外观", "调整搜索、护甲类型、部位或武器类型后再试。")
+            UI.ShowEmptyState(itemEmpty, page, L("No matching appearances", "没有符合条件的外观"), L("Adjust the search, armor, slot, or weapon filters.", "调整搜索、护甲类型、部位或武器类型后再试。"))
         else
             UI.HideEmptyState(itemEmpty)
             selectItem(selected or records[1])
@@ -2239,7 +2240,7 @@ function UI.CreateWardrobePage(parent)
         end
 
         if visible == 0 then
-            UI.ShowEmptyState(itemEmpty, page, "没有可审计的外观", "运行时审计未收到公开外观记录。")
+            UI.ShowEmptyState(itemEmpty, page, L("No appearances to audit", "没有可审计的外观"), L("No public appearance records were received.", "运行时审计未收到公开外观记录。"))
         else
             UI.HideEmptyState(itemEmpty)
         end
@@ -2311,7 +2312,7 @@ function UI.CreateWardrobePage(parent)
             setProgress:Hide()
             syncSetVariantDropdown(nil, nil)
             model:ClearModel()
-            UI.ShowEmptyState(setEmpty, page, "没有符合条件的套装", "调整搜索或职业过滤后再试。")
+            UI.ShowEmptyState(setEmpty, page, L("No matching sets", "没有符合条件的套装"), L("Adjust the search or class filter.", "调整搜索或职业过滤后再试。"))
         else
             UI.HideEmptyState(setEmpty)
             local record = selected or records[1] or allRecords[1]
@@ -2402,6 +2403,8 @@ function UI.CreateWardrobePage(parent)
         for _, itemModel in ipairs(self.scItemModels) do
             if itemModel.scCard and itemModel.scCard:IsShown()
                 and itemModel.scRecord and itemModel.scRecord.itemId == itemId then
+                itemModel.scRecord.name = Catalog.GetAppearanceDisplayName(itemModel.scRecord)
+                if itemModel.scName then itemModel.scName:SetText(itemModel.scRecord.name) end
                 -- TransmorpherItemQuery owns readiness for every item card and
                 -- feeds the shared generation-safe render queue. Replaying a
                 -- cached armor or weapon page here would collapse 18 exact

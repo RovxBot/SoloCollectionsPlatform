@@ -537,7 +537,7 @@ end
 -- appearance.
 local appearanceStore = nil
 
-local APPEARANCE_DESCRIPTION = "canonical 外观；来源物品可追溯。"
+local APPEARANCE_DESCRIPTION = L("Collect this appearance to use it in the wardrobe.", "收集此外观后可在幻化室使用。")
 
 local function buildAppearanceStore()
     if appearanceStore then
@@ -701,11 +701,18 @@ local function appearanceItemIdList(store, index)
     return { store.itemIds[index] }
 end
 
--- WardrobeCatalog is generated from Chinese source data.  The item cache is
--- locale-aware, so use it for the visible title on non-Chinese clients while
--- retaining the generated string as a cache-miss fallback.
+local function readableAppearanceFallback(itemId, fallback)
+    if not (SC.IsChineseLocale and SC.IsChineseLocale()) and type(fallback) == "string"
+        and string.find(fallback, "[\228-\233][\128-\191][\128-\191]") then
+        return string.format(L("Item %d (name loading)", "物品 %d（名称载入中）"), tonumber(itemId) or 0)
+    end
+    return fallback
+end
+
+-- Native item names are localized. Cold-cache fallback must also be readable;
+-- the generated Chinese name is not an English translation.
 local function appearanceDisplayName(store, index)
-    local fallback = store.names[index]
+    local fallback = readableAppearanceFallback(store.itemIds[index], store.names[index])
     if SC.IsChineseLocale and SC.IsChineseLocale() then
         return fallback
     end
@@ -738,7 +745,7 @@ function Catalog.GetAppearanceDisplayName(record)
             end
         end
     end
-    return record.name
+    return readableAppearanceFallback(record.itemId, record.name)
 end
 
 local function materializeAppearance(store, index)
@@ -1305,6 +1312,14 @@ local function metadataMatches(record, query)
     if query == "" then
         return true
     end
+    local itemId = tonumber(query) or tonumber(string.match(query, "^item:(%d+)$"))
+    if itemId then
+        if itemId == tonumber(record.id) or itemId == tonumber(record.itemId)
+            or itemId == tonumber(record.itemSetId) then return true end
+        for _, sourceItemId in ipairs(record.itemIds or {}) do
+            if itemId == tonumber(sourceItemId) then return true end
+        end
+    end
     local haystack = table.concat({
         tostring(record.name or ""),
         tostring(record.source or ""),
@@ -1461,14 +1476,16 @@ end
 -- pass allocates no garbage for non-matching rows.
 local appearanceProbe = {}
 
-local function fillAppearanceProbe(store, index, needsSource)
+local function fillAppearanceProbe(store, index, needsSource, localizedSearch)
     local probe = appearanceProbe
     probe.id = store.ids[index]
+    probe.itemId = store.itemIds[index]
+    probe.itemIds = store.extraItemIds[index]
     probe.slot = appearanceSlotName(store, index)
     probe.armorType = appearanceArmorType(store, index)
     probe.weaponType = appearanceWeaponType(store, index)
     probe.weaponCategory = appearanceWeaponCategory(store, index)
-    probe.name = store.names[index]
+    probe.name = localizedSearch and appearanceDisplayName(store, index) or store.names[index]
     probe.description = APPEARANCE_DESCRIPTION
     if needsSource then
         local sourceText, sourceKind = appearanceSourceInfo(store, index)
@@ -1500,6 +1517,8 @@ local function forEachMatchingAppearance(query, filters, includeCollectionState,
         return
     end
     local needsSource = appearanceQueryNeedsSource(query, filters)
+    local localizedSearch = not (SC.IsChineseLocale and SC.IsChineseLocale())
+        and query ~= nil and string.gsub(tostring(query), "%s", "") ~= ""
     local slotFilter = filters.slot
     local checkSlot = slotFilter ~= nil and slotFilter ~= "ALL"
     for index = 1, store.count do
@@ -1508,7 +1527,7 @@ local function forEachMatchingAppearance(query, filters, includeCollectionState,
             appearanceWeaponType(store, index),
             appearanceWeaponCategory(store, index),
             filters) then
-            local probe = fillAppearanceProbe(store, index, needsSource)
+            local probe = fillAppearanceProbe(store, index, needsSource, localizedSearch)
             overlayCollectionState("APPEARANCES", probe, false)
             if filterMatches("APPEARANCES", probe, query, filters, includeCollectionState) then
                 callback(store, index, probe)

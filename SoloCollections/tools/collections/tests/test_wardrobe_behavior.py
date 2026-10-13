@@ -24,6 +24,9 @@ class WardrobeBehaviorTests(unittest.TestCase):
     def test_slow_writes_keep_callbacks_without_retries(self):
         self.run_harness("wardrobe_transport_harness.lua")
 
+    def test_native_locale_names_and_item_id_search(self):
+        self.run_harness("wardrobe_catalog_harness.lua")
+
 
 if __name__ == "__main__":
     unittest.main()

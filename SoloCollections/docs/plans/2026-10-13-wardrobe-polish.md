@@ -16,7 +16,10 @@ or switch automatically. Each implementation is a separate commit on `main`.
 3. Equipment-change preview/tooltip trust: every changed equipment slot invalidates
    its old local overlay, including same-template copies. Only a confirmed apply
    restores local trust; an unrelated projection refresh cannot resurrect it.
-4. Localized journal labels, readable cold-cache fallback names and item-ID search.
+4. Localized journal labels/tooltips and native-name search. Cold-cache English
+   clients see a readable item-ID/loading label, refreshed when native names arrive.
+   Queries accept primary/alternative item IDs and `item:<id>` alongside names.
+   Full catalogue and detailed source translation still requires locale inputs.
 5. Favorites filtering and browsing position retention.
 6. Set collecting goals and explicit application of collected pieces.
 7. Saved outfit browsing and visible save/update actions.
