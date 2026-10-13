@@ -111,16 +111,10 @@ function UI.CreateTransmogFrame()
         end)
     end
     frame:SetScript("OnShow", function(self)
-        if UI.ApplyTransmogOpenFilters then
-            local changed = UI.ApplyTransmogOpenFilters()
-            if changed and self.scPage and self.scPage.scSources then
-                self.scPage.scSources.itemPage = 1
-                self.scPage.scSources.setPage = 1
-            end
-        end
+        Lab.GetFilters()
         clampFrame(self)
         if self.scSearchBox and SC.db then
-            self.scSearchBox:SetText(SC.db.query or "")
+            self.scSearchBox:SetText(SC.db.transmogQuery or "")
         end
         if self.scPage then
             self.scPage:Show()
@@ -223,7 +217,11 @@ function UI.CreateTransmogFrame()
 
     local search = UI.CreateRetailSearchBox(searchFilterHost, 115, function(value)
         if SC.db then
-            SC.db.query = value or ""
+            if SC.db.transmogQuery ~= (value or "") and frame.scPage then
+                frame.scPage.scSources.itemPage = 1
+                frame.scPage.scSources.setPage = 1
+            end
+            SC.db.transmogQuery = value or ""
         end
         refreshTransmogPage()
     end)
@@ -260,10 +258,18 @@ function UI.CreateTransmogFrame()
     if UIDropDownMenu_Initialize then
         UIDropDownMenu_Initialize(transmogFilterDropDown, function(_, level)
             if level ~= 1 then return end
-            UI.AddCollectedStateMenuButtons(level, refreshTransmogPage)
+            local filters = Lab.GetFilters()
+            local function refreshFilters()
+                if frame.scPage then
+                    frame.scPage.scSources.itemPage = 1
+                    frame.scPage.scSources.setPage = 1
+                end
+                refreshTransmogPage()
+            end
+            UI.AddCollectedStateMenuButtons(level, refreshFilters, filters, true)
             local sources = UI.TransmogFrame and UI.TransmogFrame.scPage and UI.TransmogFrame.scPage.scSources
             if not (sources and sources.mode == "SETS") then
-                UI.AddAppearanceSourceMenuButtons(level, refreshTransmogPage)
+                UI.AddAppearanceSourceMenuButtons(level, refreshFilters, filters.appearances)
             end
         end, "MENU")
         transmogFilterDropDown.scSoloCollectionsInitialized = true
@@ -324,15 +330,15 @@ function UI.CreateTransmogFrame()
         weaponDropDown:Hide()
         UIDropDownMenu_Initialize(weaponDropDown, function()
             local slot = page.scState and page.scState.selectedSlot
-            if not (slot and SC.db and SC.db.filters and SC.Catalog) then return end
+            if not (slot and SC.db and Lab.GetFilters() and SC.Catalog) then return end
             for _, option in ipairs(SC.Catalog.GetAvailableWeaponFilters(slot)) do
                 local weaponOption = option
                 local info = UIDropDownMenu_CreateInfo()
                 info.text = weaponOption.label
                 info.value = weaponOption.key
-                info.checked = SC.db.filters.weaponType == weaponOption.key
+                info.checked = Lab.GetFilters().weaponType == weaponOption.key
                 info.func = function()
-                    SC.db.filters.weaponType = weaponOption.key
+                    Lab.GetFilters().weaponType = weaponOption.key
                     if page.scSources then page.scSources.itemPage = 1 end
                     refreshTransmogPage()
                 end
@@ -354,24 +360,24 @@ function UI.CreateTransmogFrame()
         end
         armorDropDown:Hide()
         UIDropDownMenu_Initialize(armorDropDown, function()
-            if not (SC.db and SC.db.filters) then return end
+            if not (SC.db and Lab.GetFilters()) then return end
             local options = UI.GetTransmogArmorFilterOptions and UI.GetTransmogArmorFilterOptions() or {}
             for _, option in ipairs(options) do
                 local armorOption = option
                 local info = UIDropDownMenu_CreateInfo()
                 info.text = armorOption.label
                 info.value = armorOption.key
-                info.checked = SC.db.filters.armorType == armorOption.key
-                    or (armorOption.key ~= "ALL" and SC.db.filters.armorType == "AUTO"
+                info.checked = Lab.GetFilters().armorType == armorOption.key
+                    or (armorOption.key ~= "ALL" and Lab.GetFilters().armorType == "AUTO"
                         and SC.Catalog and SC.Catalog.ResolveArmorTypeForQuery
                         -- Resolve AUTO against the lab's selected slot, not the
-                        -- journal slot stored in SC.db.filters.slot.
+                        -- collection journal's independently selected slot.
                         and SC.Catalog.ResolveArmorTypeForQuery({
                             armorType = "AUTO",
                             slot = page.scState and page.scState.selectedSlot,
                         }) == armorOption.key)
                 info.func = function()
-                    SC.db.filters.armorType = armorOption.key
+                    Lab.GetFilters().armorType = armorOption.key
                     if page.scSources then page.scSources.itemPage = 1 end
                     refreshTransmogPage()
                 end
@@ -426,10 +432,10 @@ function UI.CreateTransmogFrame()
                 local info = UIDropDownMenu_CreateInfo()
                 info.text = classOption.label
                 info.value = classOption.key
-                info.checked = SC.db and SC.db.filters and SC.db.filters.classToken == classOption.key
+                info.checked = SC.db and Lab.GetFilters() and Lab.GetFilters().classToken == classOption.key
                 info.func = function()
-                    if not (SC.db and SC.db.filters) then return end
-                    SC.db.filters.classToken = classOption.key
+                    if not (SC.db and Lab.GetFilters()) then return end
+                    Lab.GetFilters().classToken = classOption.key
                     if page.scSources then page.scSources.setPage = 1 end
                     refreshTransmogPage()
                 end
@@ -498,7 +504,7 @@ function UI.SyncTransmogClassDropDown(mode)
     end
     local Identity = SC.IdentityRegistry
     local options = Identity and Identity.GetClassFilterOptions and Identity.GetClassFilterOptions() or {}
-    local selected = SC.db and SC.db.filters and SC.db.filters.classToken or "ALL"
+    local selected = SC.db and Lab.GetFilters() and Lab.GetFilters().classToken or "ALL"
     local label = L("All Classes", "全部职业")
     for _, option in ipairs(options) do
         if option.key == selected then
@@ -563,11 +569,11 @@ function UI.SyncTransmogArmorDropDown(slot, mode)
         return
     end
     local options = UI.GetTransmogArmorFilterOptions()
-    local stored = SC.db and SC.db.filters and SC.db.filters.armorType or "AUTO"
+    local stored = SC.db and Lab.GetFilters() and Lab.GetFilters().armorType or "AUTO"
     local selected = stored
     if stored == "AUTO" and SC.Catalog.ResolveArmorTypeForQuery then
         -- Resolve AUTO against the lab's selected slot (the caller passes it),
-        -- not the journal slot stored in SC.db.filters.slot.
+        -- independently of the collection journal's selected slot.
         selected = SC.Catalog.ResolveArmorTypeForQuery({ armorType = "AUTO", slot = slot })
     end
     local label = L("All", "全部")
@@ -603,8 +609,8 @@ function UI.SyncTransmogWeaponDropDown(slot, mode)
         return
     end
     local selected = "AUTO"
-    if SC.db and SC.db.filters then
-        selected = SC.Catalog.EnsureWeaponTypeForSlot(SC.db.filters, slot)
+    if SC.db and Lab.GetFilters() then
+        selected = SC.Catalog.EnsureWeaponTypeForSlot(Lab.GetFilters(), slot)
     end
     local label = SC.Catalog.WeaponFilterLabel(selected) or (options[1] and options[1].label) or ""
     if UIDropDownMenu_SetSelectedValue then

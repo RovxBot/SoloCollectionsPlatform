@@ -1,6 +1,9 @@
 local addon = assert(arg[1])
 local chinese, names = false, {}
 function GetItemInfo(id) return names[tonumber(id)] end
+function CreateFrame()
+    return { SetScript = function(self, key, fn) self[key] = fn end, RegisterEvent = function() end }
+end
 SoloCollections = {
     Localize = function(en, zh) return chinese and zh or en end,
     IsChineseLocale = function() return chinese end,
@@ -30,4 +33,16 @@ assert(C.GetAppearanceDisplayName(records[1]) == "Crown of Testing")
 chinese = true
 records = C.QueryAll("APPEARANCES", "", filters)
 assert(records[1].name == "测试头盔", "Chinese clients must keep their source names")
+
+SoloCollections.db = { filters = { favorites = false, armorType = "CLOTH" }, query = "journal search" }
+SoloCollections.WardrobeLab = {}
+dofile(addon .. "/UI/WardrobeLab/Sources.lua")
+local studioFilters = SoloCollections.WardrobeLab.GetFilters()
+studioFilters.favorites, studioFilters.slot, studioFilters.armorType = true, "HEAD", "ALL"
+assert(C.ToggleDemoFavorite("APPEARANCES", 200001))
+records = C.QueryAll("APPEARANCES", "", studioFilters)
+assert(#records == 1 and records[1].id == 200001, "favorites-only must select the starred appearance")
+assert(SoloCollections.db.filters.favorites == false and SoloCollections.db.filters.armorType == "CLOTH")
+assert(SoloCollections.db.query == "journal search", "studio preferences must not overwrite journal preferences")
+assert(SoloCollections.WardrobeLab.GetFilters().favorites == true, "opening filters again must retain the selection")
 print("Wardrobe catalogue locale and search behavioral checks passed")

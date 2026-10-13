@@ -20,7 +20,10 @@ or switch automatically. Each implementation is a separate commit on `main`.
    clients see a readable item-ID/loading label, refreshed when native names arrive.
    Queries accept primary/alternative item IDs and `item:<id>` alongside names.
    Full catalogue and detailed source translation still requires locale inputs.
-5. Favorites filtering and browsing position retention.
+5. Favorites-only filtering for studio items/sets. Studio searches and filters
+   have their own saved state and no longer reset on reopening or overwrite the
+   journal. Item/set pages retain browsing position; journal selections survive
+   closing while model renderers are still cleaned up.
 6. Set collecting goals and explicit application of collected pieces.
 7. Saved outfit browsing and visible save/update actions.
 8. Release-check maintenance and documented real-client acceptance matrix.

@@ -4,6 +4,25 @@ local Lab = SC.WardrobeLab
 if not Lab then return end
 local L = SC.Localize
 
+function Lab.GetFilters()
+    if not SC.db then return {} end
+    if type(SC.db.transmogFilters) ~= "table" then
+        local identity = SC.IdentityRegistry and SC.IdentityRegistry.GetPlayerClass
+            and SC.IdentityRegistry.GetPlayerClass()
+        SC.db.transmogFilters = {
+            collected = true, uncollected = true, favorites = false,
+            armorType = "AUTO", weaponType = "ALL",
+            classToken = identity and identity.filterToken or "ALL",
+            appearances = { hiddenSources = {} },
+        }
+    end
+    local filters = SC.db.transmogFilters
+    filters.appearances = type(filters.appearances) == "table" and filters.appearances or {}
+    filters.appearances.hiddenSources = type(filters.appearances.hiddenSources) == "table"
+        and filters.appearances.hiddenSources or {}
+    return filters
+end
+
 local ITEM_COLUMNS = 6
 local ITEM_PAGE_SIZE = 18
 local ITEM_WIDTH = 78
@@ -30,15 +49,11 @@ end
 
 local function copyFilters(slotKey)
     local filters = {}
-    for key, value in pairs((SC.db and SC.db.filters) or {}) do filters[key] = value end
+    for key, value in pairs(Lab.GetFilters()) do filters[key] = value end
     filters.slot = slotKey
-    -- Transmog uses journal collected/uncollected, but not the favorites-only toggle.
-    filters.favorites = false
     if SC.Catalog and SC.Catalog.IsWeaponFilterSlot and SC.Catalog.IsWeaponFilterSlot(slotKey) then
         SC.Catalog.EnsureWeaponTypeForSlot(filters, slotKey)
-        if SC.db and SC.db.filters then
-            SC.db.filters.weaponType = filters.weaponType
-        end
+        Lab.GetFilters().weaponType = filters.weaponType
     elseif SC.Catalog and SC.Catalog.ResolveArmorTypeForQuery then
         filters.armorType = SC.Catalog.ResolveArmorTypeForQuery(filters)
     end
@@ -47,9 +62,8 @@ end
 
 local function copySetFilters()
     local filters = {}
-    for key, value in pairs((SC.db and SC.db.filters) or {}) do filters[key] = value end
+    for key, value in pairs(Lab.GetFilters()) do filters[key] = value end
     filters.slot = "ALL"
-    filters.favorites = false
     return filters
 end
 
@@ -989,7 +1003,6 @@ function Lab.CreateSources(parent, state)
         mode = mode == "SETS" and "SETS" or "ITEMS"
         if self.mode ~= mode then
             self.mode = mode
-            if mode == "ITEMS" then self.itemPage = 1 else self.setPage = 1 end
         end
         itemTab:SetSelected(mode == "ITEMS")
         setTab:SetSelected(mode == "SETS")
@@ -1114,7 +1127,7 @@ function Lab.CreateSources(parent, state)
             self.scFilterSlot = state.selectedSlot
             self.itemPage = 1
         end
-        local query = (SC.db and SC.db.query) or ""
+        local query = (SC.db and SC.db.transmogQuery) or ""
         local filters = copyFilters(state.selectedSlot)
         local request = state.requestState or {}
         if UI.SyncTransmogWeaponDropDown then
@@ -1124,7 +1137,6 @@ function Lab.CreateSources(parent, state)
             UI.SyncTransmogArmorDropDown(state.selectedSlot, self.mode)
         end
         if self.mode == "SETS" then
-            if UI.EnsureDefaultSetClassFilter then UI.EnsureDefaultSetClassFilter() end
             if UI.SyncTransmogClassDropDown then UI.SyncTransmogClassDropDown(self.mode) end
             filters = copySetFilters()
             local matches = arrangeSetMatches(SC.Catalog.QueryAll("SETS", query, filters))

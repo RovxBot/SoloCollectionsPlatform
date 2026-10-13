@@ -2430,9 +2430,9 @@ function UI.CreateWardrobePage(parent)
     end)
     page:SetScript("OnHide", function(self)
         self.scRuntimeAuditActive = nil
+        local itemId, setId, setGroup = self.scItemSelectedId, self.scSetSelectedId, self.scSetSelectedGroupKey
         self:ClearSelection()
-        self.scItemPage = 1
-        setSetOffset(0, true)
+        self.scItemSelectedId, self.scSetSelectedId, self.scSetSelectedGroupKey = itemId, setId, setGroup
         self.scSetRecordCount = 0
         for _, itemModel in ipairs(self.scItemModels) do
             ItemCardRenderer:Clear(itemModel)

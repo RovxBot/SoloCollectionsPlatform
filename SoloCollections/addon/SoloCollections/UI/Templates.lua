@@ -890,28 +890,33 @@ function UI.ApplyTransmogOpenFilters()
     return changed
 end
 
-function UI.AddCollectedStateMenuButtons(level, onChanged)
+function UI.AddCollectedStateMenuButtons(level, onChanged, selectedFilters, includeFavorites)
     if not (SC.db and UIDropDownMenu_CreateInfo and UIDropDownMenu_AddButton) then
         return
     end
     SC.db.filters = SC.db.filters or {}
-    local filters = SC.db.filters
+    local filters = selectedFilters or SC.db.filters
     local options = {
         { key = "collected", label = L("Collected", "已收集") },
         { key = "uncollected", label = L("Not Collected", "未收集") },
     }
+    if includeFavorites then
+        options[#options + 1] = { key = "favorites", label = L("Favorites Only", "仅偏好"), defaultOff = true }
+    end
     for _, option in ipairs(options) do
         local key = option.key
+        local defaultOff = option.defaultOff
         local info = UIDropDownMenu_CreateInfo()
         info.isNotRadio = true
         info.keepShownOnClick = true
         info.text = option.label
         info.checked = function()
+            if defaultOff then return filters[key] == true end
             return filters[key] ~= false
         end
         info.func = function(_, _, _, checked)
             if checked == nil then
-                checked = not (filters[key] ~= false)
+                checked = not info.checked()
             end
             filters[key] = checked and true or false
             if onChanged then onChanged() end
@@ -921,13 +926,13 @@ function UI.AddCollectedStateMenuButtons(level, onChanged)
     end
 end
 
-function UI.AddAppearanceSourceMenuButtons(level, onChanged)
+function UI.AddAppearanceSourceMenuButtons(level, onChanged, selectedFilters)
     local kinds = SC.Catalog and SC.Catalog.APPEARANCE_SOURCE_KINDS
     if not (kinds and UIDropDownMenu_CreateInfo and UIDropDownMenu_AddButton) then
         return
     end
     local function sourceFilters()
-        return UI.GetAppearanceSourceFilters()
+        return selectedFilters or UI.GetAppearanceSourceFilters()
     end
 
     local all = UIDropDownMenu_CreateInfo()
