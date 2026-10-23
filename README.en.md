@@ -80,7 +80,7 @@ SoloCollectionsPlatform (Platform Workspace)
 ├── mod-solo-collections/           # AzerothCore C++ server-authoritative module
 │   ├── src/                        # C++ business logic, provider registration, SC2 networking, transmog core
 │   ├── data/sql/                   # Database migrations & account-wide schemas
-│   └── conf/                       # Server configuration template mod_solo_collections.conf.dist
+│   └── conf/                       # Server configuration template transmog.conf.dist
 │
 ├── SoloClientSuite/                # Full client UI integration suite (DragonUI, ClassicAPI, NewEra, etc.)
 │   ├── Interface/AddOns/           # Decoupled AddOn collection
@@ -190,14 +190,17 @@ Replaces legacy NPC text dialogs with a modern, Legion-style standalone transmog
 3. **Configure the module**:
    Copy the sample configuration and adjust as needed:
    ```powershell
-   cp <AzerothCore_Root>/modules/mod-solo-collections/conf/mod_solo_collections.conf.dist <Runtime_Dir>/etc/mod_solo_collections.conf
+   cp <AzerothCore_Root>/modules/mod-solo-collections/conf/transmog.conf.dist <Runtime_Dir>/etc/modules/transmog.conf
    ```
+   The template contains collection and cosmetic settings only. Riding, mount
+   casting, speed and flight rules remain with the server core. See
+   [configuration details](mod-solo-collections/docs/CONFIGURATION.md).
+
    **Key Configuration Directives**:
    ```ini
-   SoloCollections.Enable = 1
-   SoloCollections.Backend = "Cpp"            # Must be Cpp for sole server authority
-   SoloCollections.Transmog.Enable = 1        # Enable transmogrification
-   SoloCollections.Transmog.CostModifier = 1.0 # Transmog cost multiplier
+   SoloCollections.Backend = Cpp              # Must be Cpp for sole server authority
+   Transmogrification.Enable = 1               # Enable transmogrification
+   Transmogrification.ScaledCostModifier = 1.0 # Transmog cost multiplier
    ```
 
 ---

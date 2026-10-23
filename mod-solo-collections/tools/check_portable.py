@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run wardrobe contracts and portable native tests without a Core/server build."""
+"""Run collection contracts and portable native tests without a Core/server build."""
 from __future__ import annotations
 
 import os
@@ -18,7 +18,8 @@ def main() -> int:
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     result = subprocess.run(
         [sys.executable, "-m", "unittest", "test_wardrobe_projection_contract",
-         "test_phase9_outfit_contract", "test_p0_security_contract", "test_phase8_appearance_service_contract"],
+         "test_phase9_outfit_contract", "test_p0_security_contract", "test_phase8_appearance_service_contract",
+         "test_phase6_mount_unlock_contract"],
         cwd=ROOT / "tests", env=environment,
     )
     if result.returncode:

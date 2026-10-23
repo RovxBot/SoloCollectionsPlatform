@@ -46,12 +46,12 @@ class MountUnlockContractTests(unittest.TestCase):
         self.assertNotIn("GetMountCollectionService().Update()", player_update)
         self.assertIn("std::mutex _mutex", SERVICE)
 
-    def test_random_mount_spell_is_validated_once_at_login(self):
-        login = CORE[CORE.index("void OnPlayerLogin"):CORE.index("void OnPlayerLogout")]
-        player_update = CORE[CORE.index("void OnPlayerUpdate"):CORE.index("void OnPlayerLearnSpell")]
-        self.assertIn("sSpellMgr->GetSpellInfo(MountRandomSpellId)", login)
-        self.assertIn("player->learnSpell(MountRandomSpellId, false)", login)
-        self.assertNotIn("MountRandomSpellId", player_update)
+    def test_collections_do_not_train_or_modify_native_mount_gameplay(self):
+        for token in ("learnSpell(", "SetSkill(", "SetCanFly(", "ChangeAmount(",
+                      "SetSpeed(", "ReconcileNativeMountState", "FinalizeNativeMountCast"):
+            self.assertNotIn(token, SERVICE)
+        self.assertNotIn("learnSpell(", CORE)
+        self.assertNotIn("ReconcileCharacterMountActions", CORE)
 
     def test_account_mutations_are_serial_and_emit_revision_deltas(self):
         self.assertIn("HasPendingMutation(account)", SERVICE)
@@ -69,13 +69,13 @@ class MountUnlockContractTests(unittest.TestCase):
         self.assertIn("GetAccountCollectionCache().IsOwned(account, key)", SERVICE)
         self.assertIn("sSpellMgr->GetSpellInfo(selected->SpellId)", SERVICE)
 
-    def test_summon_prechecks_are_stable_and_never_explicitly_unmount(self):
+    def test_summon_preserves_normal_cast_rules_and_mount_switching(self):
         for token in (
             '"UNKNOWN_IDENTITY"', '"RACE_RESTRICTED"', '"CLASS_RESTRICTED"',
             '"SKILL_REQUIRED"', '"IN_COMBAT"', '"DEAD"',
             '"IN_VEHICLE"', '"ON_TAXI"', '"INDOORS"',
             '"FLYING_NOT_ALLOWED"', '"MAP_RESTRICTED"',
-            '"BATTLEGROUND_RESTRICTED"', '"SHAPESHIFT_RESTRICTED"',
+            '"SHAPESHIFT_RESTRICTED"',
             '"CAST_FAILED"',
         ):
             self.assertIn(token, SERVICE)
@@ -87,7 +87,12 @@ class MountUnlockContractTests(unittest.TestCase):
         paired = re.findall(
             r"player->Dismount\(\);\s*player->RemoveAurasByType\(SPELL_AURA_MOUNTED\);", SERVICE)
         self.assertEqual(SERVICE.count("player->Dismount()"), len(paired))
-        self.assertIn("TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE", SERVICE)
+        self.assertIn("player->CastSpell(player, spellInfo, TRIGGERED_NONE)", SERVICE)
+        self.assertNotIn("TRIGGERED_IGNORE", SERVICE)
+        self.assertIn("ridingSkill < variant.MinimumRidingSkill", SERVICE)
+        self.assertIn("spellInfo->CheckLocation(", SERVICE)
+        self.assertNotIn("MAP_EASTERN_KINGDOMS", SERVICE)
+        self.assertNotIn("MAP_KALIMDOR", SERVICE)
         self.assertIn("IsActionStatus", PROTOCOL_SERVER)
 
 

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "tools/collections/tests"
 SUITES = [
     "test_addon_contract", "test_bridge_contract", "test_sc2_client_contract",
-    "test_wardrobe_camera_set_contract", "test_wardrobe_behavior",
+    "test_wardrobe_camera_set_contract", "test_wardrobe_behavior", "test_mount_actions",
 ]
 
 

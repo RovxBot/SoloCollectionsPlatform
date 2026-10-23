@@ -8,7 +8,6 @@ publish a file that contains runtime secrets.
 
 ```ini
 SoloCollections.Backend = Cpp
-SoloCollections.ShadowReportPath = "logs/solo-collections-shadow.jsonl"
 SoloCollections.Preview.Enabled = 1
 ```
 
@@ -19,8 +18,9 @@ SoloCollections.Preview.Enabled = 1
 | `Cpp` | C++/SC2 owns actions, persistence, and success deltas | Yes |
 
 Never run ALE/SC1 and C++/SC2 as parallel writers or success responders.
-`ShadowReportPath` is only used in `Compare`; use an empty value to disable its
-file export. `Preview.Enabled` controls read-only mount/companion model priming
+`SoloCollections.ShadowReportPath` is an advanced migration-only key, omitted
+from the production template. It defaults to `"logs/solo-collections-shadow.jsonl"`
+in `Compare`; use an empty value to disable its file export. `Preview.Enabled` controls read-only mount/companion model priming
 and does not enable a legacy backend.
 
 Mount and companion favorites are account-scoped server preferences. The
@@ -105,17 +105,36 @@ No database migration or matching client change is required. Rebuild the module
 to enable the new acquisition behavior; a source commit does not update a running
 server.
 
-The same template contains inherited, adapted transmogrification settings:
+The production template exposes collection backend/preview, wardrobe mixing,
+appearance eligibility, hide, gold/token costs and shared cosmetic compatibility.
+Unused acquisition/reset flags and obsolete wardrobe price keys are omitted.
+Inherited NPC presentation, portable NPC, legacy saved sets, subscription/Plus,
+and NPC requirement bypass options are also omitted. Existing installations may
+still supply these advanced legacy keys explicitly; their code defaults are
+unchanged. `UseCollectionSystem` defaults to true, `UseVendorInterface` to false,
+and `EnablePlus` to false. Account outfits do not use the legacy NPC set settings.
 
-- `Transmogrification.Enable`
-- `Transmogrification.UseCollectionSystem`
-- `Transmogrification.UseVendorInterface`
-- quality, armor, weapon, race/class/skill restrictions
-- cost and optional token settings
-- saved outfit and portable NPC settings
+## Mount gameplay boundary
 
-Start from conservative defaults. A broader item/weapon rule changes gameplay
-authorization, not merely UI appearance.
+Account mount ownership grants access to the journal action only. It does not
+teach spells, train riding, change movement speeds, enable flight, or rewrite
+native mount auras. Summons require the character's actual riding skill and use
+`TRIGGERED_NONE`, preserving normal cast time, movement interruption, cooldowns,
+shapeshift and Core location/flight checks. Normal battleground mount rules also
+remain with Core. The optional random-mount DBC builder preserves existing spell
+records, including their flight-area attributes.
+
+Both AddOn journal views drag reusable macros that call the same SC2 summon
+handler. A character need not have personally learned the mount spell. Shortcuts
+use an account macro slot, falling back to a character slot; a full macro list
+shows an error and leaves existing macros alone.
+
+Deploy the rebuilt module before the matching AddOn. There is no SC2/schema or
+catalog hash change. A restart does not undo riding skills or learned spells
+persisted by older versions. Review affected characters before any manual repair;
+the module cannot distinguish prior legitimate training from those grants.
+Existing client overlays that modified native mount spells must be rebuilt from
+an unmodified baseline; changing the builder alone does not replace installed data.
 
 ## Legion (7.3.5) parity decisions
 

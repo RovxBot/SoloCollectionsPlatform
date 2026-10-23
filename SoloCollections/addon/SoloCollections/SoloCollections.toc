@@ -24,6 +24,7 @@ Core\CollectionState.lua
 Core\Catalog.lua
 Core\WardrobeGoals.lua
 Core\Bridge.lua
+Core\MountActions.lua
 Core\M2Camera.lua
 Core\NativePreview.lua
 Core\TransmorpherItemQuery.lua

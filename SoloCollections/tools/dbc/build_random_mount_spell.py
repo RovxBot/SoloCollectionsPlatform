@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build private 3.3.5a DBC overrides for SoloCollections random mount spell.
 
+Existing spell records, including flight restrictions, are preserved.
 The generated DBC files are local integration artifacts and must not be committed.
 """
 
@@ -9,7 +10,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import struct
 from pathlib import Path
 
@@ -23,7 +23,6 @@ SKILL_RECORD_SIZE = 56
 SPELL_ICON_FIELDS = 2
 SPELL_ICON_RECORD_SIZE = 8
 RANDOM_MOUNT_ICON_PATH = "Interface\\Icons\\SoloCollections_RandomMount"
-SPELL_ATTR4_ONLY_FLYING_AREAS = 0x04000000
 
 
 def sha256(path: Path) -> str:
@@ -68,26 +67,7 @@ def append_string(strings: bytearray, value: str) -> int:
     return offset
 
 
-def flying_catalog_actions(path: Path) -> set[int]:
-    result: set[int] = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
-        match = re.search(
-            r'CatalogLifecycle::Active, true, true, true, .*?, (\d+)u, MountCapability::Flying,',
-            line,
-        )
-        if match:
-            result.add(int(match.group(1)))
-    if not result:
-        raise ValueError(f"no active flying mount actions found in {path}")
-    return result
-
-
-def build_spell(
-    source: Path,
-    output: Path,
-    icon_id: int,
-    client_ground_fallback_actions: set[int] | None = None,
-) -> dict:
+def build_spell(source: Path, output: Path, icon_id: int) -> dict:
     rows, strings = read_dbc(source, SPELL_FIELDS, SPELL_RECORD_SIZE)
     if any(row[0] == SPELL_ID for row in rows):
         raise ValueError(f"Spell ID {SPELL_ID} already exists; refusing to overwrite")
@@ -128,18 +108,11 @@ def build_spell(
 
     rows.append(row)
     rows.sort(key=lambda item: item[0])
-    cleared = []
-    if client_ground_fallback_actions:
-        for candidate in rows:
-            if candidate[0] in client_ground_fallback_actions and candidate[8] & SPELL_ATTR4_ONLY_FLYING_AREAS:
-                candidate[8] &= ~SPELL_ATTR4_ONLY_FLYING_AREAS
-                cleared.append(candidate[0])
     write_dbc(output, rows, strings)
     return {
         "beforeRows": len(rows) - 1,
         "afterRows": len(rows),
         "iconId": row[133],
-        "clientGroundFallbackAttributeCleared": cleared,
     }
 
 
@@ -186,7 +159,7 @@ def main() -> int:
     parser.add_argument("--skill-line-ability", type=Path, required=True)
     parser.add_argument("--spell-icon", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--mount-catalog-inc", type=Path, required=True)
+    parser.add_argument("--mount-catalog-inc", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--change-id", required=True)
     args = parser.parse_args()
 
@@ -203,9 +176,8 @@ def main() -> int:
         "SkillLineAbility.dbc": sha256(args.skill_line_ability),
         "SpellIcon.dbc": sha256(args.spell_icon),
     }
-    actions = flying_catalog_actions(args.mount_catalog_inc)
     icon_result = build_spell_icon(args.spell_icon, output_icon)
-    spell_result = build_spell(args.spell, output_spell, icon_result["iconId"], actions)
+    spell_result = build_spell(args.spell, output_spell, icon_result["iconId"])
     skill_result = build_skill(args.skill_line_ability, output_skill)
     server_icon_result = build_spell_icon(args.spell_icon, server_output_icon)
     if server_icon_result["iconId"] != icon_result["iconId"]:

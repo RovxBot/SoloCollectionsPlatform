@@ -80,7 +80,7 @@ SoloCollectionsPlatform (平台工作区)
 ├── mod-solo-collections/           # AzerothCore C++ 服务端权威核心模块
 │   ├── src/                        # C++ 业务逻辑、Provider 注册、SC2 协议收发、幻化核心
 │   ├── data/sql/                   # 数据库 Migration 与账号级数据表结构
-│   └── conf/                       # 服务端配置模板 mod_solo_collections.conf.dist
+│   └── conf/                       # 服务端配置模板 transmog.conf.dist
 │
 ├── SoloClientSuite/                # 客户端全套 UI 集成套件（DragonUI、ClassicAPI、NewEra 等）
 │   ├── Interface/AddOns/           # 依赖解耦的 AddOns 集合
@@ -190,14 +190,16 @@ SoloCollectionsPlatform (平台工作区)
 3. **配置文件修改**：
    复制配置模板并按需编辑：
    ```powershell
-   cp <AzerothCore_Root>/modules/mod-solo-collections/conf/mod_solo_collections.conf.dist <Runtime_Dir>/etc/mod_solo_collections.conf
+   cp <AzerothCore_Root>/modules/mod-solo-collections/conf/transmog.conf.dist <Runtime_Dir>/etc/modules/transmog.conf
    ```
+   配置仅包含收藏和外观功能；骑术、坐骑读条、速度和飞行遵循 Core 原有规则。
+   详见[配置说明](mod-solo-collections/docs/CONFIGURATION.md)。
+
    **核心配置建议**：
    ```ini
-   SoloCollections.Enable = 1
-   SoloCollections.Backend = "Cpp"            # 必须为 Cpp，确保服务端唯一权威
-   SoloCollections.Transmog.Enable = 1        # 启用幻化功能
-   SoloCollections.Transmog.CostModifier = 1.0 # 幻化费用倍率
+   SoloCollections.Backend = Cpp              # 必须为 Cpp，确保服务端唯一权威
+   Transmogrification.Enable = 1               # 启用幻化功能
+   Transmogrification.ScaledCostModifier = 1.0 # 幻化费用倍率
    ```
 
 ---
