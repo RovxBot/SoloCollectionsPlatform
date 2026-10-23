@@ -123,7 +123,7 @@ std::vector<ItemTemplate const*> GetValidTransmogs(Player* player, Item* target,
         }
     }
 
-    if (sConfigMgr->GetOption<bool>("Transmogrification.EnableSortByQualityAndName", true)) {
+    if (sConfigMgr->GetOption<bool>("Transmogrification.EnableSortByQualityAndName", true, false)) {
         sort(allowedItems.begin(), allowedItems.end(), CmpTmog);
     }
 

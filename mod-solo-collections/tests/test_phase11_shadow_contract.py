@@ -26,7 +26,7 @@ class Phase11ShadowContractTests(unittest.TestCase):
             self.assertIn(token, BACKEND_H)
         self.assertIn('"SoloCollections.Backend", "Cpp"', BACKEND)
         self.assertIn("SoloCollections.Backend = Cpp", CONFIG)
-        self.assertIn("SoloCollections.ShadowReportPath", CONFIG)
+        self.assertIn("SoloCollections.ShadowReportPath", BACKEND)
         self.assertIn("fallback=Lua writes_enabled=0 actions_enabled=0", BACKEND)
 
     def test_compare_mode_keeps_cpp_writes_actions_and_success_deltas_disabled(self):

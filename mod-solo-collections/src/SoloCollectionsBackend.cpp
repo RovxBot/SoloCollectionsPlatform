@@ -42,7 +42,7 @@ void InitializeBackendConfiguration()
         Mode = BackendMode::Lua;
     }
     ShadowReportPath = sConfigMgr->GetOption<std::string>(
-        "SoloCollections.ShadowReportPath", "logs/solo-collections-shadow.jsonl");
+        "SoloCollections.ShadowReportPath", "logs/solo-collections-shadow.jsonl", false);
 }
 
 BackendMode GetBackendMode() noexcept

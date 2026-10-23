@@ -8,7 +8,6 @@
 #include <string>
 
 class Player;
-class SpellInfo;
 
 namespace SoloCollections
 {
@@ -23,12 +22,9 @@ public:
 
     void OnPlayerLogin(Player* player);
     void OnPlayerLearnSpell(Player* player, std::uint32_t spellId);
-    void ReconcileCharacterMountActions(Player* player);
-    void ReconcileNativeMountState(Player* player);
     void Update();
     [[nodiscard]] std::string ExecuteSummon(Player* player, CollectionId collectionId);
     [[nodiscard]] std::string ExecuteRandomSummon(Player* player);
-    void FinalizeNativeMountCast(Player* player, SpellInfo const* spellInfo);
 
 private:
     class Impl;

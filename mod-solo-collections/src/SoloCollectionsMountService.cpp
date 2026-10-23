@@ -5,12 +5,9 @@
 #include "SoloCollectionsMountCatalog.h"
 #include "SoloCollectionsIdentity.h"
 
-#include "DBCStores.h"
 #include "Player.h"
 #include "Random.h"
 #include "SharedDefines.h"
-#include "SpellAuraEffects.h"
-#include "SpellAuras.h"
 #include "SpellMgr.h"
 #include "WorldSession.h"
 
@@ -27,15 +24,6 @@ namespace
 {
 constexpr std::uint32_t MountSpellMigrationId = 1;
 constexpr std::uint16_t MountSpellMigrationVersion = 1;
-constexpr std::uint8_t EarlyRidingMaximumLevel = 19;
-constexpr std::uint8_t EarlyFlightMinimumLevel = 45;
-constexpr std::uint8_t FastFlightMinimumLevel = 60;
-constexpr std::uint16_t ApprenticeRidingSkill = 75;
-constexpr std::uint16_t ExpertRidingSkill = 225;
-constexpr std::uint16_t ArtisanRidingSkill = 300;
-constexpr std::int32_t ApprenticeMountedSpeedPercent = 60;
-constexpr std::int32_t JourneymanMountedSpeedPercent = 100;
-constexpr std::int32_t ExpertMountedFlightSpeedPercent = 150;
 
 enum class MigrationPhase : std::uint8_t
 {
@@ -91,49 +79,6 @@ bool IsMountableHumanoidForm(ShapeshiftForm form)
     }
 }
 
-void CapMountedGroundSpeed(Player* player, std::int32_t maximumPercent)
-{
-    std::set<Aura*> mountAuras;
-    for (AuraEffect* mountedEffect : player->GetAuraEffectsByType(SPELL_AURA_MOUNTED))
-        mountAuras.insert(mountedEffect->GetBase());
-
-    for (Aura* mountAura : mountAuras)
-    {
-        for (std::uint8_t index = 0; index < MAX_SPELL_EFFECTS; ++index)
-        {
-            AuraEffect* effect = mountAura->GetEffect(index);
-            if (!effect || effect->GetAmount() <= maximumPercent)
-                continue;
-            AuraType auraType = effect->GetAuraType();
-            if (auraType == SPELL_AURA_MOD_INCREASE_MOUNTED_SPEED ||
-                auraType == SPELL_AURA_MOD_MOUNTED_SPEED_ALWAYS ||
-                auraType == SPELL_AURA_MOD_MOUNTED_SPEED_NOT_STACK)
-                effect->ChangeAmount(maximumPercent);
-        }
-    }
-}
-
-void CapMountedFlightSpeedAtExpert(Player* player)
-{
-    std::set<Aura*> mountAuras;
-    for (AuraEffect* mountedEffect : player->GetAuraEffectsByType(SPELL_AURA_MOUNTED))
-        mountAuras.insert(mountedEffect->GetBase());
-
-    for (Aura* mountAura : mountAuras)
-    {
-        for (std::uint8_t index = 0; index < MAX_SPELL_EFFECTS; ++index)
-        {
-            AuraEffect* effect = mountAura->GetEffect(index);
-            if (!effect || effect->GetAmount() <= ExpertMountedFlightSpeedPercent)
-                continue;
-            AuraType auraType = effect->GetAuraType();
-            if (auraType == SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED ||
-                auraType == SPELL_AURA_MOD_MOUNTED_FLIGHT_SPEED_ALWAYS ||
-                auraType == SPELL_AURA_MOD_FLIGHT_SPEED_MOUNTED_NOT_STACKING)
-                effect->ChangeAmount(ExpertMountedFlightSpeedPercent);
-        }
-    }
-}
 }
 
 class MountCollectionService::Impl
@@ -162,97 +107,9 @@ public:
             return;
         std::scoped_lock lock(_mutex);
         AccountId account = PlayerAccount(player);
-        auto suppressed = _projectionSuppression.find(player->GetGUID().GetCounter());
-        if (suppressed != _projectionSuppression.end() && suppressed->second.erase(spellId) != 0)
-        {
-            if (suppressed->second.empty())
-                _projectionSuppression.erase(suppressed);
-            return;
-        }
         MountAccountState& state = _accounts[account];
         state.LoginCharacterGuid = player->GetGUID().GetCounter();
         QueueGrant(state, *definition, spellId, state.LoginCharacterGuid, CollectionSourceKind::Gameplay);
-    }
-
-    void ReconcileCharacterMountActions(Player* player)
-    {
-        if (!player || !player->GetSession())
-            return;
-        AccountId account = PlayerAccount(player);
-        std::optional<AccountCacheSnapshot> snapshot = GetAccountCollectionCache().Snapshot(account);
-        if (!snapshot || snapshot->State != AccountCacheLoadState::Ready)
-            return;
-        std::uint32_t guid = player->GetGUID().GetCounter();
-        {
-            std::scoped_lock lock(_mutex);
-            auto found = _projectionRevision.find(guid);
-            if (found != _projectionRevision.end() && found->second == snapshot->Revision)
-                return;
-        }
-
-        std::vector<std::uint32_t> learn;
-        for (MountCollectionDefinition const& definition : GetMountCatalog().Collections())
-        {
-            if (definition.Lifecycle != CatalogLifecycle::Active || !definition.JournalVisible ||
-                !definition.Actionable || !definition.Draggable || definition.CanonicalActionSpellId == 0)
-                continue;
-            if (!GetAccountCollectionCache().IsOwned(account, { MountCollectionTypeId, definition.Id }))
-                continue;
-            if (!player->HasSpell(definition.CanonicalActionSpellId))
-                learn.push_back(definition.CanonicalActionSpellId);
-        }
-        {
-            std::scoped_lock lock(_mutex);
-            _projectionRevision[guid] = snapshot->Revision;
-            _projectionSuppression[guid].insert(learn.begin(), learn.end());
-            if (learn.empty())
-                _projectionSuppression.erase(guid);
-        }
-        for (std::uint32_t spellId : learn)
-            player->learnSpell(spellId, false);
-    }
-
-    void ReconcileNativeMountState(Player* player)
-    {
-        if (!player || !player->GetSession())
-            return;
-        std::uint32_t guid = player->GetGUID().GetCounter();
-        // Hot path: runs every player update tick. Resolve the active mount
-        // from the (at most one) SPELL_AURA_MOUNTED aura via the catalog's
-        // action-spell hash lookup instead of scanning the whole catalog.
-        SpellInfo const* activeSpell = nullptr;
-        for (AuraEffect* mountedEffect : player->GetAuraEffectsByType(SPELL_AURA_MOUNTED))
-        {
-            if (!mountedEffect || !mountedEffect->GetBase())
-                continue;
-            SpellInfo const* candidate = mountedEffect->GetSpellInfo();
-            if (FindOwnedAction(player, candidate))
-            {
-                activeSpell = candidate;
-                break;
-            }
-        }
-        if (!activeSpell)
-        {
-            std::scoped_lock lock(_mutex);
-            _activeNativeMountState.erase(guid);
-            return;
-        }
-        std::uint8_t level = player->GetLevel();
-        std::uint8_t band = level <= EarlyRidingMaximumLevel ? 1 :
-            level < EarlyFlightMinimumLevel ? 2 : level < FastFlightMinimumLevel ? 3 : 4;
-        std::uint64_t stateKey = static_cast<std::uint64_t>(activeSpell->Id) |
-            (static_cast<std::uint64_t>(band) << 32) |
-            (static_cast<std::uint64_t>(player->GetMapId() & 0xFFFFu) << 40) |
-            (static_cast<std::uint64_t>(player->GetAreaId() & 0xFFFFu) << 56);
-        {
-            std::scoped_lock lock(_mutex);
-            auto found = _activeNativeMountState.find(guid);
-            if (found != _activeNativeMountState.end() && found->second == stateKey)
-                return;
-            _activeNativeMountState[guid] = stateKey;
-        }
-        FinalizeNativeMountCast(player, activeSpell);
     }
 
     void Update()
@@ -287,7 +144,7 @@ public:
             return "INVALID_REQUEST";
         if (definition->Lifecycle == CatalogLifecycle::Tombstone)
             return "INVALID_REQUEST";
-        if (!CatalogLifecycleAllowsAction(definition->Lifecycle))
+        if (!CatalogLifecycleAllowsAction(definition->Lifecycle) || !definition->JournalVisible || !definition->Actionable)
             return "UNSUPPORTED";
         CollectionKey key { MountCollectionTypeId, collectionId };
         if (!GetAccountCollectionCache().IsOwned(account, key))
@@ -305,8 +162,6 @@ public:
             return "IN_VEHICLE";
         if (player->IsInFlight())
             return "ON_TAXI";
-        if (player->InBattleground())
-            return "BATTLEGROUND_RESTRICTED";
         if (!IsMountableHumanoidForm(player->GetShapeshiftForm()))
             return "SHAPESHIFT_RESTRICTED";
         if (!player->IsOutdoors())
@@ -327,30 +182,7 @@ public:
         bool flightRejected = false;
         bool locationRejected = false;
         MountActionVariant const* selected = nullptr;
-        bool earlyRiding = player->GetLevel() <= EarlyRidingMaximumLevel;
         std::uint32_t ridingSkill = player->GetSkillValue(SKILL_RIDING);
-        if (earlyRiding && ridingSkill < ApprenticeRidingSkill)
-        {
-            player->SetSkill(SKILL_RIDING, 1, ApprenticeRidingSkill, ApprenticeRidingSkill);
-            ridingSkill = ApprenticeRidingSkill;
-        }
-        else if (player->GetLevel() >= FastFlightMinimumLevel && ridingSkill < ArtisanRidingSkill)
-        {
-            player->SetSkill(SKILL_RIDING, 4, ArtisanRidingSkill, ArtisanRidingSkill);
-            ridingSkill = ArtisanRidingSkill;
-        }
-        else if (player->GetLevel() >= EarlyFlightMinimumLevel && ridingSkill < ExpertRidingSkill)
-        {
-            player->SetSkill(SKILL_RIDING, 3, ExpertRidingSkill, ExpertRidingSkill);
-            ridingSkill = ExpertRidingSkill;
-        }
-        bool earlyFlightScaling = player->GetLevel() >= EarlyFlightMinimumLevel && ridingSkill < ArtisanRidingSkill;
-        std::uint32_t effectiveRidingSkill = ridingSkill;
-        if (earlyRiding)
-            effectiveRidingSkill = std::max(effectiveRidingSkill, std::uint32_t { ApprenticeRidingSkill });
-        else if (player->GetLevel() >= EarlyFlightMinimumLevel)
-            effectiveRidingSkill = std::max(effectiveRidingSkill, std::uint32_t { ExpertRidingSkill });
-        bool selectedWithinRidingSkill = false;
         for (MountActionVariant const& variant : definition->ActionVariants)
         {
             if (!maskMatches(variant.RaceMasks, raceMask))
@@ -359,8 +191,7 @@ public:
             if (!maskMatches(variant.ClassMasks, classMask))
                 continue;
             classCompatible = true;
-            bool withinRidingSkill = effectiveRidingSkill >= variant.MinimumRidingSkill;
-            if (!earlyRiding && !withinRidingSkill && !(earlyFlightScaling && variant.IsFlying))
+            if (ridingSkill < variant.MinimumRidingSkill)
                 continue;
             skillCompatible = true;
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(variant.SpellId);
@@ -374,16 +205,9 @@ public:
                 locationRejected = locationRejected || !variant.IsFlying;
                 continue;
             }
-            if (!selected || (withinRidingSkill && !selectedWithinRidingSkill) ||
-                (withinRidingSkill == selectedWithinRidingSkill &&
-                    ((earlyRiding || !withinRidingSkill) ?
-                        variant.MinimumRidingSkill < selected->MinimumRidingSkill :
-                        (variant.MinimumRidingSkill > selected->MinimumRidingSkill ||
-                            (variant.MinimumRidingSkill == selected->MinimumRidingSkill && variant.IsFlying && !selected->IsFlying)))))
-            {
+            if (!selected || variant.MinimumRidingSkill > selected->MinimumRidingSkill ||
+                (variant.MinimumRidingSkill == selected->MinimumRidingSkill && variant.IsFlying && !selected->IsFlying))
                 selected = &variant;
-                selectedWithinRidingSkill = withinRidingSkill;
-            }
         }
         if (!raceCompatible)
             return "RACE_RESTRICTED";
@@ -397,26 +221,14 @@ public:
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(selected->SpellId);
         if (!spellInfo)
             return "CAST_FAILED";
-        // Collection summons bypass the normal mounted cast restriction, so explicitly
-        // remove the previous mount first instead of allowing its aura to remain stacked.
+        // The ordinary spell pipeline owns cast time, movement interruption,
+        // cooldowns, shapeshift and location checks. Any triggered flag makes
+        // AzerothCore treat the cast as triggered and skip movement checks.
         player->Dismount();
         player->RemoveAurasByType(SPELL_AURA_MOUNTED);
-        TriggerCastFlags castFlags = TriggerCastFlags(
-            TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE | TRIGGERED_IGNORE_SHAPESHIFT);
-        SpellCastResult castResult = player->CastSpell(player, spellInfo, castFlags);
+        SpellCastResult castResult = player->CastSpell(player, spellInfo, TRIGGERED_NONE);
         if (castResult != SPELL_CAST_OK)
             return "CAST_FAILED";
-        if (earlyRiding)
-        {
-            if (player->HasIncreaseMountedFlightSpeedAura() || player->HasFlyAura())
-            {
-                player->RemoveAurasByType(SPELL_AURA_MOUNTED);
-                return "FLYING_NOT_ALLOWED";
-            }
-            CapMountedGroundSpeed(player, ApprenticeMountedSpeedPercent);
-        }
-        else if (earlyFlightScaling && player->HasIncreaseMountedFlightSpeedAura())
-            CapMountedFlightSpeedAtExpert(player);
         return "ACCEPTED";
     }
 
@@ -461,7 +273,7 @@ public:
             std::scoped_lock lock(_mutex);
             previous = _accounts[account].LastRandomCollection;
         }
-        auto tryPool = [&](std::vector<CollectionId> pool, bool favoritePool) -> std::string
+        auto tryPool = [&](std::vector<CollectionId> pool) -> std::string
         {
             if (pool.size() > 1 && previous.IsValid())
                 pool.erase(std::remove(pool.begin(), pool.end(), previous), pool.end());
@@ -473,7 +285,6 @@ public:
                 std::string result = ExecuteSummon(player, selected);
                 if (result == "ACCEPTED")
                 {
-                    MountCollectionDefinition const* definition = GetMountCatalog().Find(selected);
                     {
                         std::scoped_lock lock(_mutex);
                         _accounts[account].LastRandomCollection = selected;
@@ -490,72 +301,14 @@ public:
 
         if (!favorites.empty())
         {
-            std::string result = tryPool(favorites, true);
+            std::string result = tryPool(favorites);
             if (result != "NO_USABLE_MOUNTS")
                 return result;
         }
-        return tryPool(all, false);
-    }
-
-    void FinalizeNativeMountCast(Player* player, SpellInfo const* spellInfo)
-    {
-        MountCollectionDefinition const* definition = FindOwnedAction(player, spellInfo);
-        if (!definition)
-            return;
-
-        std::uint8_t level = player->GetLevel();
-        std::uint32_t ridingSkill = player->GetSkillValue(SKILL_RIDING);
-        if (level <= EarlyRidingMaximumLevel && ridingSkill < ApprenticeRidingSkill)
-            player->SetSkill(SKILL_RIDING, 1, ApprenticeRidingSkill, ApprenticeRidingSkill);
-        else if (level >= FastFlightMinimumLevel && ridingSkill < ArtisanRidingSkill)
-            player->SetSkill(SKILL_RIDING, 4, ArtisanRidingSkill, ArtisanRidingSkill);
-        else if (level >= EarlyFlightMinimumLevel && ridingSkill < ExpertRidingSkill)
-            player->SetSkill(SKILL_RIDING, 3, ExpertRidingSkill, ExpertRidingSkill);
-
-        bool flightAllowed = definition->Capability == MountCapability::Flying &&
-            IsFlightAllowed(player, spellInfo);
-        if (!flightAllowed)
-        {
-            player->SetCanFly(false);
-            CapMountedGroundSpeed(player, level <= EarlyRidingMaximumLevel ?
-                ApprenticeMountedSpeedPercent : JourneymanMountedSpeedPercent);
-        }
-        else if (level < FastFlightMinimumLevel)
-            CapMountedFlightSpeedAtExpert(player);
+        return tryPool(all);
     }
 
 private:
-    MountCollectionDefinition const* FindOwnedAction(Player* player, SpellInfo const* spellInfo) const
-    {
-        if (!player || !player->GetSession() || !spellInfo)
-            return nullptr;
-        MountCollectionDefinition const* definition = GetMountCatalog().FindByActionSpell(spellInfo->Id);
-        if (!definition || definition->Lifecycle != CatalogLifecycle::Active ||
-            !definition->JournalVisible || !definition->Actionable || !definition->Draggable)
-            return nullptr;
-        AccountId account = PlayerAccount(player);
-        std::optional<AccountCacheSnapshot> snapshot = GetAccountCollectionCache().Snapshot(account);
-        if (!snapshot || snapshot->State != AccountCacheLoadState::Ready ||
-            !GetAccountCollectionCache().IsOwned(account, { MountCollectionTypeId, definition->Id }))
-            return nullptr;
-        return definition;
-    }
-
-    static bool IsFlightAllowed(Player* player, SpellInfo const* spellInfo)
-    {
-        if (!player || player->GetLevel() < EarlyFlightMinimumLevel)
-            return false;
-        AreaTableEntry const* area = sAreaTableStore.LookupEntry(player->GetAreaId());
-        if (!area)
-            area = sAreaTableStore.LookupEntry(player->GetZoneId());
-        if (!area || (area->flags & AREA_FLAG_NO_FLY_ZONE) != 0)
-            return false;
-        std::uint32_t virtualMap = GetVirtualMapForMapAndZone(player->GetMapId(), player->GetZoneId());
-        if (virtualMap == MAP_EASTERN_KINGDOMS || virtualMap == MAP_KALIMDOR)
-            return true;
-        return area->IsFlyable() && player->canFlyInZone(player->GetMapId(), player->GetZoneId(), spellInfo);
-    }
-
     static void QueueGrant(MountAccountState& state, MountCollectionDefinition const& definition,
         std::uint32_t spellId, std::uint32_t characterGuid, CollectionSourceKind sourceKind)
     {
@@ -667,9 +420,6 @@ private:
     }
 
     std::map<AccountId, MountAccountState> _accounts;
-    std::map<std::uint32_t, CollectionRevision> _projectionRevision;
-    std::map<std::uint32_t, std::set<std::uint32_t>> _projectionSuppression;
-    std::map<std::uint32_t, std::uint64_t> _activeNativeMountState;
     std::mutex _mutex;
 };
 
@@ -686,16 +436,6 @@ void MountCollectionService::OnPlayerLearnSpell(Player* player, std::uint32_t sp
     _impl->OnPlayerLearnSpell(player, spellId);
 }
 
-void MountCollectionService::ReconcileCharacterMountActions(Player* player)
-{
-    _impl->ReconcileCharacterMountActions(player);
-}
-
-void MountCollectionService::ReconcileNativeMountState(Player* player)
-{
-    _impl->ReconcileNativeMountState(player);
-}
-
 void MountCollectionService::Update()
 {
     _impl->Update();
@@ -709,11 +449,6 @@ std::string MountCollectionService::ExecuteSummon(Player* player, CollectionId c
 std::string MountCollectionService::ExecuteRandomSummon(Player* player)
 {
     return _impl->ExecuteRandomSummon(player);
-}
-
-void MountCollectionService::FinalizeNativeMountCast(Player* player, SpellInfo const* spellInfo)
-{
-    _impl->FinalizeNativeMountCast(player, spellInfo);
 }
 
 MountCollectionService& GetMountCollectionService()

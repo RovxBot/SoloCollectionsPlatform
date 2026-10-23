@@ -1443,14 +1443,16 @@ bool Transmogrification::CanNeverTransmog(ItemTemplate const* itemTemplate)
 
 void Transmogrification::LoadConfig(bool reload)
 {
+    // Legacy NPC/subscription options remain optional for existing installs.
+    // Do not log missing-key warnings for options absent from the public template.
 #ifdef PRESETS
-    EnableSetInfo = sConfigMgr->GetOption<bool>("Transmogrification.EnableSetInfo", true);
-    SetNpcText = sConfigMgr->GetOption<uint32>("Transmogrification.SetNpcText", 601084);
+    EnableSetInfo = sConfigMgr->GetOption<bool>("Transmogrification.EnableSetInfo", true, false);
+    SetNpcText = sConfigMgr->GetOption<uint32>("Transmogrification.SetNpcText", 601084, false);
 
-    EnableSets = sConfigMgr->GetOption<bool>("Transmogrification.EnableSets", true);
-    MaxSets = sConfigMgr->GetOption<uint8>("Transmogrification.MaxSets", 10);
-    SetCostModifier = sConfigMgr->GetOption<float>("Transmogrification.SetCostModifier", 3.0f);
-    SetCopperCost = sConfigMgr->GetOption<int32>("Transmogrification.SetCopperCost", 0);
+    EnableSets = sConfigMgr->GetOption<bool>("Transmogrification.EnableSets", true, false);
+    MaxSets = sConfigMgr->GetOption<uint8>("Transmogrification.MaxSets", 10, false);
+    SetCostModifier = sConfigMgr->GetOption<float>("Transmogrification.SetCostModifier", 3.0f, false);
+    SetCopperCost = sConfigMgr->GetOption<int32>("Transmogrification.SetCopperCost", 0, false);
 
     if (MaxSets > MAX_OPTIONS)
         MaxSets = MAX_OPTIONS;
@@ -1471,8 +1473,8 @@ void Transmogrification::LoadConfig(bool reload)
     }
 #endif
 
-    EnableTransmogInfo = sConfigMgr->GetOption<bool>("Transmogrification.EnableTransmogInfo", true);
-    TransmogNpcText = uint32(sConfigMgr->GetOption<uint32>("Transmogrification.TransmogNpcText", 601083));
+    EnableTransmogInfo = sConfigMgr->GetOption<bool>("Transmogrification.EnableTransmogInfo", true, false);
+    TransmogNpcText = uint32(sConfigMgr->GetOption<uint32>("Transmogrification.TransmogNpcText", 601083, false));
 
     std::set<uint32> refreshedAllowed;
     std::set<uint32> refreshedNotAllowed;
@@ -1499,10 +1501,10 @@ void Transmogrification::LoadConfig(bool reload)
     AllowLegendary = sConfigMgr->GetOption<bool>("Transmogrification.AllowLegendary", false);
     AllowArtifact = sConfigMgr->GetOption<bool>("Transmogrification.AllowArtifact", false);
     AllowHeirloom = sConfigMgr->GetOption<bool>("Transmogrification.AllowHeirloom", true);
-    AllowTradeable = sConfigMgr->GetOption<bool>("Transmogrification.AllowTradeable", false);
+    AllowTradeable = sConfigMgr->GetOption<bool>("Transmogrification.AllowTradeable", false, false);
 
     AllowMixedArmorTypes = sConfigMgr->GetOption<bool>("Transmogrification.AllowMixedArmorTypes", false);
-    AllowLowerTiers = sConfigMgr->GetOption<bool>("Transmogrification.AllowLowerTiers", false);
+    AllowLowerTiers = sConfigMgr->GetOption<bool>("Transmogrification.AllowLowerTiers", false, false);
     CollectedMixedArmorPolicy = ParseCollectedMixedArmor(
         sConfigMgr->GetOption<std::string>("SoloCollections.Transmog.MixedArmor", "any"));
     CollectedMixedWeaponPolicy = ParseCollectedMixedWeapons(
@@ -1513,24 +1515,24 @@ void Transmogrification::LoadConfig(bool reload)
 
     AllowMixedWeaponTypes = sConfigMgr->GetOption<uint8>("Transmogrification.AllowMixedWeaponTypes", MIXED_WEAPONS_STRICT);
 
-    IgnoreReqRace = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqRace", false);
-    IgnoreReqClass = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqClass", false);
-    IgnoreReqSkill = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqSkill", false);
-    IgnoreReqSpell = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqSpell", false);
-    IgnoreReqLevel = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqLevel", false);
-    IgnoreReqEvent = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqEvent", false);
-    IgnoreReqStats = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqStats", false);
-    UseCollectionSystem = sConfigMgr->GetOption<bool>("Transmogrification.UseCollectionSystem", true);
-    UseVendorInterface = sConfigMgr->GetOption<bool>("Transmogrification.UseVendorInterface", false);
+    IgnoreReqRace = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqRace", false, false);
+    IgnoreReqClass = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqClass", false, false);
+    IgnoreReqSkill = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqSkill", false, false);
+    IgnoreReqSpell = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqSpell", false, false);
+    IgnoreReqLevel = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqLevel", false, false);
+    IgnoreReqEvent = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqEvent", false, false);
+    IgnoreReqStats = sConfigMgr->GetOption<bool>("Transmogrification.IgnoreReqStats", false, false);
+    UseCollectionSystem = sConfigMgr->GetOption<bool>("Transmogrification.UseCollectionSystem", true, false);
+    UseVendorInterface = sConfigMgr->GetOption<bool>("Transmogrification.UseVendorInterface", false, false);
     AllowHiddenTransmog = sConfigMgr->GetOption<bool>("Transmogrification.AllowHiddenTransmog", true);
-    HiddenTransmogIsFree = sConfigMgr->GetOption<bool>("Transmogrification.HiddenTransmogIsFree", true);
-    TrackUnusableItems = sConfigMgr->GetOption<bool>("Transmogrification.TrackUnusableItems", true);
-    RetroActiveAppearances = sConfigMgr->GetOption<bool>("Transmogrification.RetroActiveAppearances", true);
-    ResetRetroActiveAppearances = sConfigMgr->GetOption<bool>("Transmogrification.ResetRetroActiveAppearancesFlag", false);
+    HiddenTransmogIsFree = sConfigMgr->GetOption<bool>("Transmogrification.HiddenTransmogIsFree", true, false);
+    TrackUnusableItems = sConfigMgr->GetOption<bool>("Transmogrification.TrackUnusableItems", true, false);
+    RetroActiveAppearances = sConfigMgr->GetOption<bool>("Transmogrification.RetroActiveAppearances", true, false);
+    ResetRetroActiveAppearances = sConfigMgr->GetOption<bool>("Transmogrification.ResetRetroActiveAppearancesFlag", false, false);
 
     IsTransmogEnabled = sConfigMgr->GetOption<bool>("Transmogrification.Enable", true);
-    IsPortableNPCEnabled = sConfigMgr->GetOption<bool>("Transmogrification.EnablePortable", true);
-    ShowSetDisclaimer = sConfigMgr->GetOption<bool>("Transmogrification.ShowSetDisclaimer", false);
+    IsPortableNPCEnabled = sConfigMgr->GetOption<bool>("Transmogrification.EnablePortable", true, false);
+    ShowSetDisclaimer = sConfigMgr->GetOption<bool>("Transmogrification.ShowSetDisclaimer", false, false);
 
     if (!sObjectMgr->GetItemTemplate(TokenEntry))
     {
@@ -1538,18 +1540,18 @@ void Transmogrification::LoadConfig(bool reload)
     }
 
     /* TransmogPlus */
-    IsTransmogPlusEnabled = sConfigMgr->GetOption<bool>("Transmogrification.EnablePlus", false);
+    IsTransmogPlusEnabled = sConfigMgr->GetOption<bool>("Transmogrification.EnablePlus", false, false);
 
     transmogPlusData refreshedPlusData;
     bool plusDataValid =
-        ParseMembershipLevels(sConfigMgr->GetOption<std::string>("Transmogrification.MembershipLevels", ""), PLUS_FEATURE_GREY_ITEMS, refreshedPlusData) &&
-        ParseMembershipLevels(sConfigMgr->GetOption<std::string>("Transmogrification.MembershipLevelsLegendary", ""), PLUS_FEATURE_LEGENDARY_ITEMS, refreshedPlusData) &&
-        ParseMembershipLevels(sConfigMgr->GetOption<std::string>("Transmogrification.MembershipLevelsPet", ""), PLUS_FEATURE_PET, refreshedPlusData) &&
-        ParseMembershipLevels(sConfigMgr->GetOption<std::string>("Transmogrification.MembershipLevelsSkipLevelReq", ""), PLUS_FEATURE_SKIP_LEVEL_REQ, refreshedPlusData);
+        ParseMembershipLevels(sConfigMgr->GetOption<std::string>("Transmogrification.MembershipLevels", "", false), PLUS_FEATURE_GREY_ITEMS, refreshedPlusData) &&
+        ParseMembershipLevels(sConfigMgr->GetOption<std::string>("Transmogrification.MembershipLevelsLegendary", "", false), PLUS_FEATURE_LEGENDARY_ITEMS, refreshedPlusData) &&
+        ParseMembershipLevels(sConfigMgr->GetOption<std::string>("Transmogrification.MembershipLevelsPet", "", false), PLUS_FEATURE_PET, refreshedPlusData) &&
+        ParseMembershipLevels(sConfigMgr->GetOption<std::string>("Transmogrification.MembershipLevelsSkipLevelReq", "", false), PLUS_FEATURE_SKIP_LEVEL_REQ, refreshedPlusData);
     if (plusDataValid)
         plusDataMap.swap(refreshedPlusData);
 
-    PetSpellId = sConfigMgr->GetOption<uint32>("Transmogrification.PetSpellId", 2000100);
+    PetSpellId = sConfigMgr->GetOption<uint32>("Transmogrification.PetSpellId", 2000100, false);
     PetEntry = 0;
 
     if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(PetSpellId))

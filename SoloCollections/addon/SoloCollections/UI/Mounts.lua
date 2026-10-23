@@ -13,7 +13,6 @@ local MIN_MODEL_SCALE = 0.35
 local MAX_MODEL_SCALE = 2.5
 local TWO_PI = math.pi * 2
 local DRAG_ROTATION_CONSTANT = tonumber(MODELFRAME_DRAG_ROTATION_CONSTANT) or 0.010
-local RANDOM_MOUNT_SPELL_ID = 150544
 local RANDOM_MOUNT_ICON = "Interface\\Icons\\SoloCollections_RandomMount"
 
 local MOUNT_ACTION_MESSAGES = {
@@ -80,39 +79,8 @@ function UI.CreateMountsPage(parent)
     page.scModelGeneration = 0
     page.scModelReady = false
     local summonRecord, setFavoriteRecord, summonRandomMount, openContextMenu, pickupRandomMountSpell
-    local companionIndexBySpell = {}
-
-    local function rebuildCompanionIndex()
-        companionIndexBySpell = {}
-        if type(GetNumCompanions) ~= "function" or type(GetCompanionInfo) ~= "function" then return end
-        for index = 1, (GetNumCompanions("MOUNT") or 0) do
-            local _, _, spellId = GetCompanionInfo("MOUNT", index)
-            spellId = tonumber(spellId)
-            if spellId and spellId > 0 then companionIndexBySpell[spellId] = index end
-        end
-    end
-
     local function pickupMountCompanion(record)
-        if not record or not record.collected then
-            showNotice("尚未获得该坐骑，不能拖到动作条。")
-            return false
-        end
-        local spellId = tonumber(record.canonicalActionSpellId)
-        if not spellId or spellId <= 0 then
-            showNotice("该坐骑暂不支持动作条拖拽。")
-            return false
-        end
-        local index = companionIndexBySpell[spellId]
-        if not index then
-            rebuildCompanionIndex()
-            index = companionIndexBySpell[spellId]
-        end
-        if not index or type(PickupCompanion) ~= "function" then
-            showNotice("坐骑技能正在同步，请稍后再试。")
-            return false
-        end
-        PickupCompanion("MOUNT", index)
-        return true
+        return SC.MountActions.Pickup(record and record.id)
     end
 
     local function insertMountLink(record)
@@ -247,32 +215,8 @@ function UI.CreateMountsPage(parent)
     randomSummon:SetPoint("RIGHT", randomHost, "RIGHT", 0, 0)
     randomSummon:RegisterForDrag("LeftButton")
 
-    local function findRandomMountSpellBookSlot()
-        if type(GetNumSpellTabs) ~= "function" then return nil end
-        for tab = 1, (GetNumSpellTabs() or 0) do
-            local _, _, offset, count = GetSpellTabInfo(tab)
-            for slot = (offset or 0) + 1, (offset or 0) + (count or 0) do
-                local spellType, spellId = GetSpellBookItemInfo(slot, BOOKTYPE_SPELL)
-                if spellType == "SPELL" and tonumber(spellId) == RANDOM_MOUNT_SPELL_ID then
-                    return slot
-                end
-                local link = GetSpellLink and GetSpellLink(slot, BOOKTYPE_SPELL)
-                if link and tonumber(link:match("spell:(%d+)")) == RANDOM_MOUNT_SPELL_ID then
-                    return slot
-                end
-            end
-        end
-        return nil
-    end
-
     pickupRandomMountSpell = function()
-        local slot = findRandomMountSpellBookSlot()
-        if not slot or type(PickupSpell) ~= "function" then
-            showNotice("随机坐骑技能正在同步，请稍后再试。")
-            return false
-        end
-        PickupSpell(slot, BOOKTYPE_SPELL)
-        return true
+        return SC.MountActions.PickupRandom()
     end
 
     local randomLabel = randomHost:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -945,12 +889,11 @@ function UI.CreateMountsPage(parent)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:SetText("召唤随机坐骑", 1, 0.82, 0.18)
         GameTooltip:AddLine("优先从已收集的偏好坐骑中随机选择；没有偏好时从全部已收集坐骑中选择。", 1, 1, 1, true)
-        GameTooltip:AddLine("拖动到动作条可放置真实随机坐骑技能。", 0.35, 0.85, 1, true)
+        GameTooltip:AddLine(SC.Localize("Drag to an action bar to create a reusable mount shortcut.",
+            "拖动到动作条可放置可复用的坐骑快捷方式。"), 0.35, 0.85, 1, true)
         local bridgeState = SC.Bridge and SC.Bridge.GetCategoryState and SC.Bridge.GetCategoryState(10)
         if bridgeState ~= "Ready" then
             GameTooltip:AddLine("收藏状态正在同步。", 1, 0.45, 0.2, true)
-        elseif not findRandomMountSpellBookSlot() then
-            GameTooltip:AddLine("随机坐骑技能正在同步。", 1, 0.45, 0.2, true)
         end
         GameTooltip:Show()
     end)
@@ -983,16 +926,6 @@ function UI.CreateMountsPage(parent)
     infoButton:SetScript("OnDragStart", function()
         pickupMountCompanion(page.scSelectedRecord)
     end)
-
-    page:RegisterEvent("COMPANION_LEARNED")
-    page:RegisterEvent("COMPANION_UNLEARNED")
-    page:RegisterEvent("COMPANION_UPDATE")
-    page:RegisterEvent("SPELLS_CHANGED")
-    page:RegisterEvent("LEARNED_SPELL_IN_TAB")
-    page:SetScript("OnEvent", function()
-        rebuildCompanionIndex()
-    end)
-    rebuildCompanionIndex()
 
     model:SetScript("OnMouseDown", function(self, button)
         if button == "LeftButton" then

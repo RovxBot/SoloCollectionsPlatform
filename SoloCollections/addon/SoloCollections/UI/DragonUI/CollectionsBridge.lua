@@ -316,12 +316,13 @@ function CO.SummonRandomFavorite(kind)
     end)
 end
 
--- Only locally materialized companion spells can be dragged to an action bar.
--- Account-wide entries still summon from the journal through the authoritative
--- bridge; treating collection ids as legacy companion indexes would select an
--- unrelated spell or corrupt the drag operation.
+-- Account mounts use the same server-authorized action on the bar and in the
+-- journal, including on characters that never learned the native mount spell.
 function CO.Drag(kind, entry)
     if entry and entry.scAccountCollection then
+        if kind == "MOUNT" then
+            return SC.MountActions.Pickup(entry.collectionId)
+        end
         if entry.nativeIndex and PickupCompanion then PickupCompanion(kind, entry.nativeIndex) end
         return
     end
